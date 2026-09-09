@@ -84,7 +84,6 @@ model QuizQuestion {
   id            String   @id @default(cuid())
   sessionId     String
   questionId    String
-  position      Int
   userAnswer    String?
   isCorrect     Boolean?
   responseTimeMs Int?
