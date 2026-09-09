@@ -11,3 +11,8 @@ coverage/
 backend/prisma/dev.db
 backend/prisma/dev.db-journal
 *.tsbuildinfo
+# TWA project build outputs (regenerable)
+apk/app-project/app/build/
+apk/app-project/build/
+apk/app-project/.gradle/
+apk/app-project/local.properties

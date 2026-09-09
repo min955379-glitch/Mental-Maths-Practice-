@@ -7,11 +7,18 @@ ISCSP exam preparation.
 
 ```
 .
-├── pwa/              # Self-contained Progressive Web App (works offline, installable on Android)
-├── apk/              # APK packaging — Bubblewrap/TWA config, build script, full instructions
-├── backend/          # Optional Node + Prisma backend (from a previous iteration)
-├── frontend/         # Optional React + Vite frontend (from a previous iteration)
-└── README.md         # This file
+├── pwa/                              # Self-contained Progressive Web App (works offline, installable on Android)
+├── apk/
+│   ├── ISCSP-Mental-Math-Arena.apk   # ★ Signed, installable Android APK (932 KB)
+│   ├── app-project/                  # Generated TWA project (rebuild with ./gradlew assembleRelease)
+│   ├── twa-manifest.json             # TWA configuration
+│   ├── build.sh                      # One-command rebuild script
+│   ├── README.md                     # Full build + install instructions
+│   ├── RELEASE-NOTES.md              # Release notes + verification report
+│   └── assetlinks.json               # Digital Asset Links template
+├── backend/                          # Optional Node + Prisma backend (from a previous iteration)
+├── frontend/                         # Optional React + Vite frontend (from a previous iteration)
+└── README.md                         # This file
 ```
 
 **The recommended way to use the app is `pwa/`.** It's a complete,
@@ -141,7 +148,11 @@ reflects the exact state of the work.
 - `apk/twa-manifest.json` — Bubblewrap configuration (edit and build)
 - `apk/assetlinks.json` — Digital Asset Links template
 - `apk/build.sh` — one-command build script
-- Builds a signed, Play-Store-compatible APK in 10-20 minutes
+- **APK successfully built in this environment:**
+  `apk/ISCSP-Mental-Math-Arena.apk` (932 KB, signed, installable on
+  Android 5.0+). The full TWA project is at `apk/app-project/` — run
+  `./gradlew assembleRelease` from there to rebuild.
+- See `apk/RELEASE-NOTES.md` for installation + update instructions.
 
 ## How to run the PWA locally
 
