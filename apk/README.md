@@ -1,147 +1,131 @@
 # ISCSP Mental Math AI Arena — Android APK
 
-The app at `../pwa/` is a complete Progressive Web App (PWA). It installs
-on Android with one tap from Chrome's "Add to Home Screen" menu and works
-fully offline. This directory gives you everything needed to also build
-a **native APK** that distributes through sideloading, your website, or
-alternative Android app stores.
+The Android APK at `ISCSP-Mental-Math-Arena.apk` is a **fully self-contained
+native Android app** that bundles the PWA in its `assets/` folder. The PWA
+loads from `file:///android_asset/index.html`, which means:
 
-There are **two production-grade paths** to a real APK:
+- **No internet is required** to run the app
+- **No external host** is required
+- **GitHub Pages is not required**
+- The app works the moment you install it
 
-| Path | Tooling | Output | Time to first APK |
-|---|---|---|---|
-| **Path A (recommended): Bubblewrap / TWA** | Node + JDK | Signed APK (Play Store compatible) | 10-20 min |
-| **Path B: Capacitor** | Node + Android Studio | Native wrapper | 30-60 min |
+## What's in the box
 
-Both are described below. Pick the one that matches your environment.
+| File | Description |
+|---|---|
+| `ISCSP-Mental-Math-Arena.apk` | **The signed, installable Android APK (~4.6 MB)** |
+| `app/` | Android Studio project (Java + WebView) |
+| `app/src/main/assets/` | The bundled PWA (mirror of `../pwa/`) |
+| `app/src/main/java/.../MainActivity.java` | WebView wrapper that loads the PWA |
+| `build.gradle`, `settings.gradle`, etc. | Gradle build files |
+| `gradle/wrapper/` | Gradle wrapper |
+| `release.keystore` | Signing key — **back this up!** |
+| `build.sh` | One-command rebuild script |
 
----
+## How to install the APK
 
-## Path A — Bubblewrap (Trusted Web Activity) ⭐ recommended
+1. Copy `ISCSP-Mental-Math-Arena.apk` to your Android phone (USB, email,
+   cloud drive, AirDroid, etc.).
+2. Open the file. Android will prompt you to allow installation from
+   "unknown sources" — allow it for this file.
+3. Tap "Install". The app appears in your launcher as **ISCSP Mental Math**
+   with the ISCSP icon.
+4. Open the app — it launches into the Mental Math Arena immediately,
+   no network required.
 
-Bubblewrap is Google's official CLI for turning any PWA into a TWA APK.
-No Android Studio required.
+## How the app works (architecture)
+
+```
+Android (WebView) → file:///android_asset/index.html → PWA loads fully
+```
+
+The Android app is a minimal `WebView` wrapper:
+- A single Java activity (`MainActivity.java`) that creates a `WebView`
+- The `WebView` loads `file:///android_asset/index.html` (the PWA entry)
+- The PWA's HTML, CSS, JS, icons, service worker, etc. all live in
+  `app/src/main/assets/` — bundled inside the APK
+- JavaScript and DOM storage are enabled so the PWA can run normally
+- `localStorage` works as usual — your progress and stats persist across
+  app launches
+- The service worker registers and caches the rest of the assets
+- No network is needed after install
+
+## How to rebuild
 
 ### Prerequisites
 
-- Node.js 18+ (`node -v`)
-- JDK 17+ (`java -version`)
-- A publicly reachable HTTPS URL where the PWA will be hosted
-  (GitHub Pages, Netlify, Vercel, your own server, etc.)
+- JDK 17 (or newer 11+)
+- Android SDK with:
+  - `platforms;android-34`
+  - `build-tools;34.0.0`
+  - `platform-tools`
+- `apksigner` (part of build-tools) — only needed to re-sign
 
-### Step 1 — Host the PWA
-
-Upload the entire `pwa/` folder to any static host. Examples:
-
-- **GitHub Pages:** push `pwa/` to a `gh-pages` branch, enable Pages.
-- **Netlify:** drag-and-drop the `pwa/` folder at https://app.netlify.com/drop
-- **Vercel:** `vercel deploy pwa --prod`
-
-You'll end up with a URL like `https://yourname.github.io/Mental-Maths-Practice-/pwa/`
-or `https://iscsp-math-arena.netlify.app/`. **The whole PWA must be served
-at that URL** and the manifest + service worker must be reachable (you can
-verify by visiting `https://your-url/manifest.webmanifest`).
-
-### Step 2 — Configure TWA metadata
-
-Edit `twa-manifest.json` and replace the placeholder values:
-
-```json
-{
-  "packageId": "com.yourname.iscspmatharena",
-  "host": "yourname.github.io",
-  "name": "ISCSP Mental Math AI Arena",
-  "launcherName": "Mental Math",
-  "display": "standalone",
-  "themeColor": "#0b1437",
-  "backgroundColor": "#0b1437",
-  "iconUrl": "https://yourname.github.io/Mental-Maths-Practice-/pwa/icons/icon-512.png",
-  "splashColor": "#0b1437",
-  "startUrl": "/Mental-Maths-Practice-/pwa/",
-  "scope": "/Mental-Maths-Practice-/pwa/"
-}
-```
-
-### Step 3 — Build the APK
+### One-command build
 
 ```bash
 cd apk
-npm init -y
-npx @bubblewrap/cli@latest init --manifest=twa-manifest.json
-npx @bubblewrap/cli@latest build
+echo "sdk.dir=$ANDROID_HOME" > local.properties   # or your SDK path
+bash build.sh
 ```
 
-The signed APK will be at `app-release-bundle.apk` (or `app-release-signed.apk`).
-Bubblewrap will generate a keystore for you on first build; **back it up** —
-you'll need it for all future updates.
+This produces a fresh `ISCSP-Mental-Math-Arena.apk`.
 
-### Step 4 — Install on Android
+### Manual build
 
 ```bash
-adb install app-release-signed.apk
+# Sync the PWA
+rm -rf app/src/main/assets
+mkdir -p app/src/main/assets
+cp -r ../pwa/. app/src/main/assets/
+
+# Build
+gradle assembleRelease    # or: ./gradlew assembleRelease
+
+# Sign
+apksigner sign \
+  --ks release.keystore --ks-pass pass:mentalmath --key-pass pass:mentalmath \
+  --ks-key-alias iscspmatharena \
+  --out app/build/outputs/apk/release/app-release-signed.apk \
+  app/build/outputs/apk/release/app-release.apk
+
+cp app/build/outputs/apk/release/app-release-signed.apk ISCSP-Mental-Math-Arena.apk
 ```
 
-Or transfer the APK to the phone and tap it (enable "Install from unknown
-sources" in Settings → Security).
+## Customizing
 
-### Step 5 (optional) — Set up Digital Asset Links
+To update the PWA content:
+1. Edit files in `../pwa/`
+2. Run `bash build.sh` — it auto-syncs the PWA into the APK assets
 
-For the APK to feel like a "real" installed app (full-screen, no browser
-bar, works after the app is closed), you need a Digital Asset Links
-verification file served from your domain. Bubblewrap can generate it:
+To rebrand:
+- Edit `app/src/main/res/values/strings.xml` (app name)
+- Replace `app/src/main/res/mipmap-*/ic_launcher.png` (icons)
+- Edit `app/src/main/java/.../MainActivity.java` (status bar color)
 
+To re-sign with a new key:
 ```bash
-npx @bubblewrap/cli@latest update
+keytool -genkey -v -keystore release.keystore -alias iscspmatharena \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -storepass YOUR_PASS -keypass YOUR_PASS \
+  -dname "CN=Your Name, O=Your Org, C=PK"
+# Then rebuild + re-sign
 ```
 
-Then upload the produced `assetlinks.json` to
-`https://your-domain/.well-known/assetlinks.json`.
+## Why a WebView wrapper, not a TWA?
 
----
+The earlier version of this project used a **Trusted Web Activity (TWA)**
+to point the APK at a hosted PWA. That approach broke when the host
+(`raw.githubusercontent.com`) didn't serve the PWA as a navigable website —
+the app would open to a "404 Not Found" page.
 
-## Path B — Capacitor
+A native WebView wrapper is more reliable:
+- No external host dependency
+- Works fully offline
+- Loads instantly (no DNS, no TLS handshake)
+- Smaller attack surface
+- Simpler to ship and debug
+- Standard Android components, easy to understand
 
-Capacitor wraps a web app in a native Android shell. It's heavier than
-TWA but gives you access to native APIs if you ever need them.
-
-```bash
-npm install -g @ionic/cli
-ionic start MentalMath blank --type=vanilla --capacitor
-# Replace www/ contents with the contents of ../pwa/
-npx cap add android
-npx cap open android
-# In Android Studio: Build → Generate Signed Bundle / APK
-```
-
----
-
-## What's in this directory
-
-- `twa-manifest.json` — Bubblewrap configuration template.
-- `assetlinks.json` — sample Digital Asset Links file (regenerate with
-  your own signing key fingerprint after `bubblewrap update`).
-- `build.sh` — one-command build script (edit and run).
-- `README.md` — this file.
-
-## Notes
-
-- The TWA APK is **production-grade**: it uses Chrome Custom Tabs, is
-  signed with a release keystore, and is suitable for distribution via
-  the Play Store (after the standard review).
-- The PWA inside the APK works **fully offline** thanks to the service
-  worker shipped at `../pwa/sw.js`.
-- The first install is ~3-4 MB.
-- No emulator, no Android SDK, no Gradle daemon required for the build
-  itself — Bubblewrap handles everything.
-
-## Quick verification
-
-After installing the APK:
-
-1. Open the app — it should look identical to the PWA in Chrome.
-2. Tap "Start Practice" — you should be able to submit answers and see
-   instant feedback with the mental shortcut.
-3. Turn on airplane mode and try again — the app should still work
-   completely (everything is cached after first load).
-4. Tap the system back button — the app should minimize cleanly without
-   losing your quiz progress.
+The PWA inside is unchanged — it still has every feature, every question,
+every pattern, every mode.

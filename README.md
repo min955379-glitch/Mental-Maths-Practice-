@@ -9,13 +9,14 @@ ISCSP exam preparation.
 .
 ├── pwa/                              # Self-contained Progressive Web App (works offline, installable on Android)
 ├── apk/
-│   ├── ISCSP-Mental-Math-Arena.apk   # ★ Signed, installable Android APK (932 KB)
-│   ├── app-project/                  # Generated TWA project (rebuild with ./gradlew assembleRelease)
-│   ├── twa-manifest.json             # TWA configuration
+│   ├── ISCSP-Mental-Math-Arena.apk   # ★ Signed, installable Android APK (4.6 MB)
+│   ├── app/                          # Android Studio project (Java + WebView wrapper)
+│   │   └── src/main/assets/          # PWA bundled inside the APK (file:///android_asset/)
+│   ├── gradle/wrapper/               # Gradle wrapper
+│   ├── release.keystore              # Signing key — back this up
 │   ├── build.sh                      # One-command rebuild script
 │   ├── README.md                     # Full build + install instructions
-│   ├── RELEASE-NOTES.md              # Release notes + verification report
-│   └── assetlinks.json               # Digital Asset Links template
+│   └── RELEASE-NOTES.md              # Release notes
 ├── backend/                          # Optional Node + Prisma backend (from a previous iteration)
 ├── frontend/                         # Optional React + Vite frontend (from a previous iteration)
 └── README.md                         # This file
@@ -144,14 +145,14 @@ reflects the exact state of the work.
 - Installable on Android via Chrome → "Add to Home Screen" with one tap
 
 ### Step 15 — APK packaging
-- `apk/README.md` — full step-by-step build instructions
-- `apk/twa-manifest.json` — Bubblewrap configuration (edit and build)
-- `apk/assetlinks.json` — Digital Asset Links template
-- `apk/build.sh` — one-command build script
 - **APK successfully built in this environment:**
-  `apk/ISCSP-Mental-Math-Arena.apk` (932 KB, signed, installable on
-  Android 5.0+). The full TWA project is at `apk/app-project/` — run
-  `./gradlew assembleRelease` from there to rebuild.
+  `apk/ISCSP-Mental-Math-Arena.apk` (4.6 MB, signed, installable on
+  Android 5.0+).
+- Architecture: native Android **WebView wrapper** that loads the PWA
+  from `file:///android_asset/index.html`. The entire PWA is bundled
+  inside the APK — **no internet required**, no external host required.
+- Build pipeline: `apk/app/` is a standard Android Gradle project.
+  Rebuild with `bash apk/build.sh`.
 - See `apk/RELEASE-NOTES.md` for installation + update instructions.
 
 ## How to run the PWA locally
