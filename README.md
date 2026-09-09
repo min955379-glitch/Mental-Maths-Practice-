@@ -1,4 +1,4 @@
-# ISCSP Mental Math AI Arena
+# Mental Maths Practice
 
 A complete, polished, production-quality mental-math training platform for
 ISCSP exam preparation.
@@ -9,7 +9,7 @@ ISCSP exam preparation.
 .
 ├── pwa/                              # Self-contained Progressive Web App (works offline, installable on Android)
 ├── apk/
-│   ├── ISCSP-Mental-Math-Arena.apk   # ★ Signed, installable Android APK (4.6 MB)
+│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK (~5.2 MB)
 │   ├── app/                          # Android Studio project (Java + WebView wrapper)
 │   │   └── src/main/assets/          # PWA bundled inside the APK (file:///android_asset/)
 │   ├── gradle/wrapper/               # Gradle wrapper
@@ -154,6 +154,39 @@ reflects the exact state of the work.
 - Build pipeline: `apk/app/` is a standard Android Gradle project.
   Rebuild with `bash apk/build.sh`.
 - See `apk/RELEASE-NOTES.md` for installation + update instructions.
+
+### Step 16 — Math notation cleanup + app rename + new launcher icon
+- **Proper math typography** in every user-facing string. `*` → `×`,
+  `-` between digits → `−` (with proper spacing). All `*` between
+  operands in `data.js`, `generator.js` converted to `×`. Unit notation
+  (`km/h`, `m/s`), fraction notation (`1/3`, `7/20`), and the actual
+  `*` JS operators in code are preserved unchanged. SVG path data in
+  `icons.js` and `ui.js` (e.g. `1.41-1.41`) is preserved unchanged.
+- The exact example from the review card now reads:
+  `"Cross multiply: 3 × 5 − 2 × 4 = 15 − 8 = 7. Denominator = 20. -> 7/20."`
+  instead of `3*5 - 2*4 = 15 - 8 = 7`.
+- **App renamed** to **"Mental Maths Practice"** everywhere user-visible:
+  Android app label, PWA `<title>`, manifest `name` + `short_name`,
+  in-app brand, footer, eyebrow text, dashboard heading. Repo name
+  remains the same on GitHub.
+- **New launcher icon** generated from the user-uploaded artwork
+  (brain + abacus + "Mental Maths Practice" text on navy). All Android
+  densities produced: 48/72/96/144/192 px PNGs for `mipmap-*dpi/`,
+  plus a 432×432 adaptive foreground (RGBA, with the icon inset into
+  the safe zone). The previous procedural checkmark icons are fully
+  replaced. AndroidManifest.xml now references both `ic_launcher` and
+  `ic_launcher_round`.
+- **APK rebuilt from clean state.** `apk/Mental-Maths-Practice.apk`
+  (~5.2 MB), signed with the existing release key
+  (v1 + v2 + v3 schemes). Same package name and signing key as
+  previous build, so it installs as an upgrade.
+- **Verified the actual installed APK** (not just source):
+  - `aapt dump badging` → `application-label:'Mental Maths Practice'`
+  - `assets/sw.js` → `const CACHE = 'iscsp-mm-v4';`
+  - `assets/manifest.webmanifest` → `"name": "Mental Maths Practice"`
+  - `assets/index.html` → `<title>Mental Maths Practice</title>`
+  - 37 `×` and 15 `−` instances in `data.js`; 0 `*` in user-facing math
+  - `km/h` and `1/3` preserved as unit/fraction notation
 
 ## How to run the PWA locally
 

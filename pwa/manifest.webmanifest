@@ -1,6 +1,6 @@
 {
-  "name": "ISCSP Mental Math AI Arena",
-  "short_name": "Mental Math",
+  "name": "Mental Maths Practice",
+  "short_name": "Mental Maths",
   "description": "Train your mental speed for ISCSP-style mental math with instant feedback, shortcuts, and adaptive practice.",
   "start_url": "./index.html",
   "scope": "./",
