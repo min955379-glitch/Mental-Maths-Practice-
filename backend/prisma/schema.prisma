@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  username      String   @unique
+  passwordHash  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  quizSessions  QuizSession[]
+  attempts      QuestionAttempt[]
+  performances  UserPerformance[]
+  dailyProgress DailyProgress[]
+}
+
+model Category {
+  id           String  @id @default(cuid())
+  name         String  @unique
+  slug         String  @unique
+  description  String?
+  displayOrder Int     @default(0)
+
+  questions    Question[]
+  performances UserPerformance[]
+}
+
+model Question {
+  id              String   @id @default(cuid())
+  text            String
+  correctAnswer   String
+  acceptedAnswers String   // JSON array of accepted forms
+  unit            String?
+  categoryId      String
+  difficulty      String   // Easy, Medium, Hard, Expert
+  shortcut        String
+  explanation     String
+  mentalPattern   String
+  commonMistake   String?
+  sourceType      String   // "seed" | "generated"
+  patternKey      String?  // for generation grouping
+  createdAt       DateTime @default(now())
+
+  category        Category @relation(fields: [categoryId], references: [id])
+  attempts        QuestionAttempt[]
+  quizQuestions   QuizQuestion[]
+
+  @@index([categoryId])
+  @@index([difficulty])
+}
+
+model QuizSession {
+  id                  String   @id @default(cuid())
+  userId              String
+  mode                String   // quick, timed, full, category, weak, mistake
+  categoryFilter      String?  // category slug if applicable
+  difficultyFilter    String?  // comma-separated difficulty list
+  totalQuestions      Int
+  correctAnswers      Int      @default(0)
+  incorrectAnswers    Int      @default(0)
+  totalResponseTimeMs Int      @default(0)
+  score               Int      @default(0)
+  status              String   @default("in_progress") // in_progress, completed, abandoned
+  timerSeconds        Int?
+  startedAt           DateTime @default(now())
+  completedAt         DateTime?
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizQuestions       QuizQuestion[]
+  attempts            QuestionAttempt[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model QuizQuestion {
+  id            String   @id @default(cuid())
+  sessionId     String
+  questionId    String
+  position      Int
+  userAnswer    String?
+  isCorrect     Boolean?
+  responseTimeMs Int?
+  answeredAt    DateTime?
+  order         Int
+
+  session       QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question      Question    @relation(fields: [questionId], references: [id])
+
+  @@unique([sessionId, order])
+  @@index([sessionId])
+}
+
+model QuestionAttempt {
+  id              String   @id @default(cuid())
+  userId          String
+  questionId      String
+  quizSessionId   String?
+  userAnswer      String
+  isCorrect       Boolean
+  responseTimeMs  Int
+  attemptedAt     DateTime @default(now())
+
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question        Question     @relation(fields: [questionId], references: [id])
+  session         QuizSession? @relation(fields: [quizSessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([questionId])
+  @@index([isCorrect])
+}
+
+model UserPerformance {
+  id                  String   @id @default(cuid())
+  userId              String
+  categoryId          String
+  questionsAttempted  Int      @default(0)
+  questionsCorrect    Int      @default(0)
+  totalResponseTimeMs Int      @default(0)
+  accuracy            Float    @default(0)
+  averageResponseTime Float    @default(0)
+  updatedAt           DateTime @updatedAt
+
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category            Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, categoryId])
+  @@index([userId])
+}
+
+model DailyProgress {
+  id               String   @id @default(cuid())
+  userId           String
+  date             String   // YYYY-MM-DD
+  questionsSolved  Int      @default(0)
+  correctAnswers   Int      @default(0)
+  totalTimeSec     Int      @default(0)
+  sessionsCount    Int      @default(0)
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model MentalPattern {
+  id          String  @id @default(cuid())
+  title       String  @unique
+  category    String
+  description String
+  examples    String  // JSON array
+  formula     String?
+  createdAt   DateTime @default(now())
+}
