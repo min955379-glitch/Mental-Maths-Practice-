@@ -1,0 +1,21 @@
+{
+  "packageId": "com.example.iscspmatharena",
+  "host": "example.github.io",
+  "name": "ISCSP Mental Math AI Arena",
+  "launcherName": "Mental Math",
+  "display": "standalone",
+  "themeColor": "#0b1437",
+  "backgroundColor": "#0b1437",
+  "iconUrl": "https://example.github.io/Mental-Maths-Practice-/pwa/icons/icon-512.png",
+  "splashColor": "#0b1437",
+  "startUrl": "/Mental-Maths-Practice-/pwa/",
+  "scope": "/Mental-Maths-Practice-/pwa/",
+  "webManifestUrl": "https://example.github.io/Mental-Maths-Practice-/pwa/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": { "appsFlyerEnabled": false, "playBillingEnabled": false },
+  "alphaDependencies": { "enabled": false },
+  "enableNotifications": false,
+  "orientation": "portrait",
+  "versionCode": 1,
+  "versionName": "1.0.0"
+}

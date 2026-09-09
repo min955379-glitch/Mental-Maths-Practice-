@@ -1,0 +1,90 @@
+(function () {
+  'use strict';
+  const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const pick = (arr) => arr[rand(0, arr.length - 1)];
+  function fmt(n) { if (Number.isInteger(n)) return String(n); return String(parseFloat(n.toFixed(3))); }
+  function genPercentOf() {
+    const variant = pick([1,2,3]);
+    let p, n, ans, shortcut, explanation, difficulty, commonMistake;
+    if (variant === 1) { p = pick([10,20,25,30,40,50,75,100]); n = pick([60,80,120,150,200,240,400,500,800,1000]); ans = (p/100)*n; shortcut = p+'% = '+(p/100)+' * '+n+' = '+fmt(ans); explanation = p+'% of '+n+' = ('+p+'/100) * '+n+' = '+fmt(ans)+'.'; difficulty = "Easy"; commonMistake = "Multiplying n * 0.0p with long arithmetic."; }
+    else if (variant === 2) { p = pick([15,5,35,45,60,80,90]); n = pick([80,120,200,240,320,400,600,800]); ans = (p/100)*n; shortcut = '10% = '+fmt(0.1*n)+', 5% = '+fmt(0.05*n)+'. Adjust and add.'; explanation = 'Break '+p+'% into 10% chunks and combine. Result = '+fmt(ans)+'.'; difficulty = "Medium"; commonMistake = "Dividing instead of multiplying."; }
+    else { p = pick([12.5,7.5,17.5,22.5,2.5,250,150,125]); n = pick([80,160,200,240,320,400,800,1000]); ans = (p/100)*n; let note=""; if(p===12.5)note="12.5% = 1/8. "; else if(p===7.5)note="7.5% = 3/40. "; shortcut = note+n+' * '+(p/100)+' = '+fmt(ans)+'.'; explanation = p+'% of '+n+' = '+fmt(ans)+'.'; difficulty = (p===250||p===150) ? "Medium" : "Hard"; commonMistake = "Long decimal multiplication."; }
+    return { question:'What is '+p+'% of '+n+'?', correctAnswer:fmt(ans), acceptedAnswers:[], unit:'', category:'Percentages', difficulty, shortcut, explanation, mentalPattern:"10% chunks, special fractions (12.5% = 1/8, 7.5% = 3/40), or direct multiplication.", commonMistake, sourceType:'generated' };
+  }
+  function genSpeedDistanceTime() {
+    const t = pick([15,20,30,45,6,10,12]); const v = pick([60,90,120,180,240,300,450,600,72,54]); const d = (v*t)/60;
+    return { question:'A vehicle moves at '+v+' km/h. How many kilometers does it cover in '+t+' minutes?', correctAnswer:fmt(d), acceptedAnswers:[fmt(d)+' km'], unit:'km', category:'Speed Distance Time', difficulty: t<=12?'Medium':'Easy', shortcut:t+' min = '+t+'/60 hour = '+fmt(t/60)+' h. '+v+' * '+fmt(t/60)+' = '+fmt(d)+'.', explanation:'Distance = Speed * Time = '+v+' * ('+t+'/60) = '+fmt(d)+' km.', mentalPattern:"Convert minutes to a fraction of an hour, then multiply.", commonMistake:"Multiplying speed by minutes instead of hours.", sourceType:'generated' };
+  }
+  function genFractionOf() {
+    const n = pick([40,60,80,100,120,144,200,240,360]); const fd = pick([[1,4],[3,4],[1,5],[2,5],[3,5],[1,8],[3,8],[5,8],[7,8]]); const num=fd[0], den=fd[1]; const ans = (num/den)*n;
+    return { question:'What is '+num+'/'+den+' of '+n+'?', correctAnswer:fmt(ans), acceptedAnswers:[], unit:'', category:'Fractions', difficulty: den<=5?'Easy':'Medium', shortcut:num+'/'+den+' of '+n+' = ('+num+' * '+n+') / '+den+' = '+fmt(ans)+'.', explanation:'Multiply n by num, then divide by den.', mentalPattern:"Multiply first, then divide. Cancel if possible.", commonMistake:"Dividing first by the larger number.", sourceType:'generated' };
+  }
+  function genUnitPrice() {
+    const qty = pick([4,5,6,8,10,12,15,20]); const unit = pick([10,12,15,20,25,30,40,50]); const total = qty*unit; const newQty = pick([3,5,7,9,11,14,16,18,24]); const newTotal = newQty*unit;
+    return { question:'If '+qty+' items cost '+total+', what is the cost of '+newQty+' items?', correctAnswer:fmt(newTotal), acceptedAnswers:[], unit:'', category:'Ratios Proportions', difficulty:'Easy', shortcut:'1 item = '+unit+'. '+newQty+' * '+unit+' = '+fmt(newTotal)+'.', explanation:'Unit price = '+total+'/'+qty+' = '+unit+'. '+newQty+' * '+unit+' = '+fmt(newTotal)+'.', mentalPattern:"Find the unit price first, then multiply.", commonMistake:"Cross-multiplying without simplifying.", sourceType:'generated' };
+  }
+  function genProfitLoss() {
+    const cp = pick([200,300,400,500,600,800,1000,1200]); const pct = pick([10,15,20,25,30,40,50]); const isProfit = Math.random()<0.5; const sp = isProfit ? cp + (cp*pct/100) : cp - (cp*pct/100);
+    return { question: isProfit ? 'A shopkeeper bought an item for '+cp+' and sold it at a '+pct+'% profit. What is the selling price?' : 'A shopkeeper bought an item for '+cp+' and sold it at a '+pct+'% loss. What is the selling price?', correctAnswer:fmt(sp), acceptedAnswers:[], unit:'', category:'Profit Loss', difficulty: pct<=25?'Easy':'Medium', shortcut:pct+'% of '+cp+' = '+fmt(cp*pct/100)+'. '+(isProfit?'Add to':'Subtract from')+' '+cp+' = '+fmt(sp)+'.', explanation: isProfit?'Profit = '+pct+'% of '+cp+' = '+fmt(cp*pct/100)+'. SP = '+cp+' + profit = '+fmt(sp)+'.':'Loss = '+pct+'% of '+cp+' = '+fmt(cp*pct/100)+'. SP = '+cp+' - loss = '+fmt(sp)+'.', mentalPattern:"Profit/Loss % is always on the cost price. Find that amount, then add or subtract.", commonMistake:"Using the selling price as the base for the percentage.", sourceType:'generated' };
+  }
+  function genPipes() {
+    const a = pick([3,4,5,6,8,10,12]); let b = pick([6,8,10,12,15,20,24]); while (b===a) b = pick([6,8,10,12,15,20,24]); const ans = (a*b)/(a+b);
+    return { question:'Pipe A fills a tank in '+a+' hours and Pipe B fills it in '+b+' hours. If both pipes are open together, how many hours will they take?', correctAnswer:fmt(ans), acceptedAnswers:[fmt(ans)+' hours'], unit:'hours', category:'Pipes Tanks', difficulty:'Medium', shortcut:'Product over sum = ('+a+' * '+b+') / ('+a+' + '+b+') = '+fmt(ans)+'.', explanation:'Combined rate = 1/'+a+' + 1/'+b+' = '+(a+b)/(a*b)+' tank/h. Time = 1 / combined rate = '+fmt(ans)+' hours.', mentalPattern:"Two pipes: (a * b) / (a + b).", commonMistake:"Averaging the two times instead of using the formula.", sourceType:'generated' };
+  }
+  function genKmhToMs() {
+    const known = [18,36,54,72,90,108,126,144]; const v = pick(known); const ms = (v*5)/18;
+    return { question:'Convert '+v+' km/h into meters per second.', correctAnswer:fmt(ms), acceptedAnswers:[fmt(ms)+' m/s'], unit:'m/s', category:'Unit Conversion', difficulty: v%36===0?'Easy':'Medium', shortcut:v+' * (5/18) = '+fmt(ms)+' m/s. (Or '+v+'/18 * 5.)', explanation:'km/h -> m/s: multiply by 5/18. '+v+' * 5/18 = '+fmt(ms)+' m/s.', mentalPattern:"Memorize 18 km/h = 5 m/s. Scale the 5 accordingly.", commonMistake:"Multiplying by 18/5 instead of 5/18.", sourceType:'generated' };
+  }
+  function genMsToKmh() {
+    const known = [5,10,15,20,25,30,35,40]; const m = pick(known); const kmh = m*3.6;
+    return { question:'Convert '+m+' m/s into km/h.', correctAnswer:fmt(kmh), acceptedAnswers:[fmt(kmh)+' km/h'], unit:'km/h', category:'Unit Conversion', difficulty:'Easy', shortcut:m+' * 3.6 = '+fmt(kmh)+' km/h.', explanation:'m/s -> km/h: multiply by 3.6. '+m+' * 3.6 = '+fmt(kmh)+'.', mentalPattern:"10 m/s = 36 km/h. Scale.", commonMistake:"Multiplying by 18/5 instead of 3.6.", sourceType:'generated' };
+  }
+  function genMultiplyBy11() {
+    const a = rand(12,89); const tens=Math.floor(a/10); const units=a%10; const sum=tens+units; let middle=String(sum); let extra=0; if(sum>=10){extra=1;middle=String(sum-10);} const ans = (tens+extra)*100 + parseInt(middle,10)*10 + units;
+    return { question:'Multiply quickly: '+a+' * 11', correctAnswer:fmt(ans), acceptedAnswers:[], unit:'', category:'Mental Multiplication', difficulty: sum>=10?'Medium':'Easy', shortcut:'Insert sum of digits ('+tens+'+'+units+'='+sum+') between '+tens+' and '+units+' -> '+ans+'.', explanation:'Two-digit * 11: place the sum of the digits between them. Carry if sum >= 10.', mentalPattern:"n * 11: digits of n with their sum in the middle.", commonMistake:"Forgetting to carry when the digit sum is two-digit.", sourceType:'generated' };
+  }
+  function genDecimalMultiply() {
+    const a = parseFloat((rand(2,9)/10).toFixed(1)); const b = parseFloat((rand(2,9)/10).toFixed(1)); const ans = parseFloat((a*b).toFixed(3));
+    return { question:'Multiply: '+a+' * '+b, correctAnswer:fmt(ans), acceptedAnswers:[], unit:'', category:'Decimals', difficulty:'Easy', shortcut:'Digits '+Math.round(a*10)+' * '+Math.round(b*10)+' = '+Math.round(a*10)*Math.round(b*10)+', then place 3 decimals -> '+fmt(ans)+'.', explanation:a+' * '+b+' = '+ans+'.', mentalPattern:"Ignore decimals, count places at the end.", commonMistake:"Miscounting decimal places.", sourceType:'generated' };
+  }
+  function genAgeProblem() {
+    const k = pick([2,3,4,5]); const son = pick([6,7,8,9,10,12]); const total = son*(k+1);
+    return { question:'A father is '+k+' times older than his son. The sum of their ages is '+total+' years. What is the son\'s age?', correctAnswer:fmt(son), acceptedAnswers:[son+' years'], unit:'years', category:'Age Problems', difficulty: k===2?'Easy':'Medium', shortcut:k+' + 1 = '+(k+1)+' parts. '+total+' / '+(k+1)+' = '+son+'.', explanation:'Let son = x. Father = '+k+'x. x + '+k+'x = '+total+' -> '+(k+1)+'x = '+total+' -> x = '+son+'.', mentalPattern:"Total parts method — split the whole into (k + 1) parts.", commonMistake:"Dividing the total by k instead of k+1.", sourceType:'generated' };
+  }
+  function genRatio() {
+    const total = pick([24,32,36,40,48,56,64,72,80,96]); const a = pick([2,3,4,5]); let b = pick([1,2,3,4,5]); while(b===a) b = pick([1,2,3,4,5]); const sumParts=a+b; const each=total/sumParts; if(!Number.isInteger(each)) return genRatio();
+    return { question:'In a group of '+total+' people, the ratio of boys to girls is '+a+':'+b+'. How many girls are there?', correctAnswer:fmt(b*each), acceptedAnswers:[b*each+' girls'], unit:'', category:'Ratios Proportions', difficulty:'Medium', shortcut:'Total parts = '+sumParts+'. Each part = '+total+'/'+sumParts+' = '+each+'. Girls = '+b+' * '+each+' = '+(b*each)+'.', explanation:'Sum of ratio parts = '+sumParts+'. Each = '+total+'/'+sumParts+' = '+each+'. Girls = '+b+' * '+each+' = '+(b*each)+'.', mentalPattern:"Total parts method: divide whole by sum, multiply by relevant part.", commonMistake:"Multiplying by the wrong part.", sourceType:'generated' };
+  }
+  function genWorkTime() {
+    const m = pick([6,8,10,12,15,20]); const d = pick([10,12,15,20,24,30]); const work = m*d; const newM = pick([4,5,6,8,10,12,15,16,24]); if(newM===m) return genWorkTime(); const newD = work/newM;
+    return { question:m+' men can finish a work in '+d+' days. How many days will '+newM+' men take?', correctAnswer:fmt(newD), acceptedAnswers:[fmt(newD)+' days'], unit:'days', category:'Work Time', difficulty:'Medium', shortcut:'Work = '+m+' * '+d+' = '+work+' man-days. '+work+' / '+newM+' = '+fmt(newD)+'.', explanation:'Work = men * days = '+m+' * '+d+' = '+work+'. Days = '+work+' / '+newM+' = '+fmt(newD)+'.', mentalPattern:"Man-days method: total work stays constant.", commonMistake:"Adding men instead of using the man-day product.", sourceType:'generated' };
+  }
+  function genAverageOfSequence() {
+    const start = pick([11,13,15,17,21,23,25,31]); const diff = 2; const count = pick([5,7]); const mid = (count-1)/2; const largest = start + mid*2*diff;
+    return { question:'The average of '+count+' consecutive odd numbers is '+(start+mid*diff)+'. What is the largest number?', correctAnswer:fmt(largest), acceptedAnswers:[], unit:'', category:'Averages', difficulty:'Medium', shortcut:'Average = middle. Largest = average + '+(mid*diff)+'.', explanation:'For consecutive numbers, average = middle value. Largest = middle + (count-1)/2 * step.', mentalPattern:"Average of consecutive sequence equals the middle value.", commonMistake:"Thinking the largest is the average itself.", sourceType:'generated' };
+  }
+  function genOppositeDirection() {
+    const a = pick([10,12,14,16,18,20]); const b = pick([10,12,14,16,18,20]); const t = pick([0.5,1,1.5,2]); const d = (a+b)*t;
+    const timeStr = t===0.5?'30 minutes':(t===1?'1 hour':(t===1.5?'1 hour 30 minutes':'2 hours'));
+    return { question:'Two cyclists start from the same point and move in opposite directions at '+a+' km/h and '+b+' km/h. How far apart are they after '+timeStr+'?', correctAnswer:fmt(d), acceptedAnswers:[fmt(d)+' km'], unit:'km', category:'Relative Speed', difficulty: (t===0.5||t===1.5)?'Medium':'Easy', shortcut:'Opposite directions -> add speeds = '+(a+b)+' km/h. '+(t===0.5?'Half hour':(t===1.5?'1.5 h':(t+' h')))+' -> '+fmt(d)+' km.', explanation:'Opposite-direction relative speed = '+(a+b)+' km/h. Distance = '+(a+b)+' * '+t+' = '+fmt(d)+' km.', mentalPattern:"Opposite directions -> add speeds.", commonMistake:"Subtracting the speeds instead of adding.", sourceType:'generated' };
+  }
+  const GENERATORS = { 'Percentages': genPercentOf, 'Speed Distance Time': genSpeedDistanceTime, 'Fractions': genFractionOf, 'Ratios Proportions': genUnitPrice, 'Profit Loss': genProfitLoss, 'Pipes Tanks': genPipes, 'Unit Conversion': [genKmhToMs, genMsToKmh], 'Mental Multiplication': genMultiplyBy11, 'Decimals': genDecimalMultiply, 'Age Problems': genAgeProblem, 'Averages': genAverageOfSequence, 'Work Time': genWorkTime, 'Relative Speed': genOppositeDirection };
+  function generateOne(category) {
+    const cats = category ? [category] : Object.keys(GENERATORS);
+    const usable = cats.filter(c => GENERATORS[c]);
+    if (usable.length === 0) return null;
+    const cat = pick(usable); const fn = GENERATORS[cat];
+    const q = typeof fn === 'function' ? fn() : pick(fn)();
+    if (!q) return null;
+    q.id = 'g-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    return q;
+  }
+  function generateMany(count, category) {
+    const list = []; let safety = 0;
+    while (list.length < count && safety < count*20) {
+      const q = generateOne(category); if (q) list.push(q); safety++;
+    }
+    return list;
+  }
+  window.Generator = { generateOne, generateMany };
+})();

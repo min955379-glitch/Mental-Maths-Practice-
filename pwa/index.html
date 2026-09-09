@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1437" />
+  <meta name="description" content="ISCSP Mental Math AI Arena — train your mental speed with instant feedback, mental shortcuts, and adaptive practice." />
+  <title>ISCSP Mental Math AI Arena</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="app-header" id="appHeader">
+    <button class="icon-btn nav-toggle" id="navToggle" aria-label="Open navigation" aria-expanded="false">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <a href="#/dashboard" class="brand" aria-label="ISCSP Mental Math AI Arena — Home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 14l4 4L20 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="brand-text">
+        <span class="brand-title">ISCSP</span>
+        <span class="brand-sub">Mental Math Arena</span>
+      </span>
+    </a>
+    <div class="header-right">
+      <button class="icon-btn" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" id="themeIcon"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="icon-btn" id="userBtn" aria-label="Account" title="Account">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+  <nav class="sidenav" id="sidenav" aria-label="Primary">
+    <div class="sidenav-inner">
+      <a href="#/dashboard" class="nav-item" data-route="dashboard"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 12l9-8 9 8M5 10v10h14V10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></a>
+      <a href="#/practice" class="nav-item" data-route="practice"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 4l14 8-14 8V4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Quick Practice</span></a>
+      <a href="#/timed" class="nav-item" data-route="timed"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 9v4l3 2M9 3h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Timed Quiz</span></a>
+      <a href="#/fulltest" class="nav-item" data-route="fulltest"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 4h16v16H4z M8 8h8M8 12h8M8 16h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Full Test</span></a>
+      <a href="#/categories" class="nav-item" data-route="categories"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Categories</span></a>
+      <a href="#/weak" class="nav-item" data-route="weak"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M5 19l3-3M16 8l3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Weak Areas</span></a>
+      <a href="#/mistakes" class="nav-item" data-route="mistakes"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3l9 16H3l9-16z M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Mistake Review</span></a>
+      <a href="#/patterns" class="nav-item" data-route="patterns"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2V5zM8 7h8M8 11h8M8 15h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Patterns</span></a>
+      <a href="#/history" class="nav-item" data-route="history"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>History</span></a>
+      <a href="#/coach" class="nav-item" data-route="coach"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 4a3 3 0 0 0-3 3v1a3 3 0 0 0-2 2.8V14a3 3 0 0 0 2 2.8V19a3 3 0 0 0 3 3h2v-3H9v-2h6v2h-2v3h2a3 3 0 0 0 3-3v-2.2A3 3 0 0 0 20 14v-3.2A3 3 0 0 0 18 8V7a3 3 0 0 0-3-3H9zM9 7h6v1H9V7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>AI Coach</span></a>
+      <a href="#/settings" class="nav-item" data-route="settings"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span>Settings</span></a>
+    </div>
+  </nav>
+  <div class="scrim" id="scrim" aria-hidden="true"></div>
+  <main id="main" class="app-main" tabindex="-1"></main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <template id="tpl-landing">
+    <section class="screen landing">
+      <div class="landing-grid">
+        <div class="landing-copy">
+          <p class="eyebrow">ISCSP Mental Math AI Arena</p>
+          <h1 class="hero-title">Train your mental speed.<br/>Master the patterns.<br/>Prepare smarter.</h1>
+          <p class="hero-sub">Practice ISCSP-style mental mathematics with instant feedback, mental shortcuts, speed tracking, and adaptive practice.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#/practice">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 4l14 8-14 8V4z" fill="currentColor"/></svg>
+              Start Practice
+            </a>
+            <a class="btn btn-secondary" href="#/timed">Timed Quiz</a>
+            <a class="btn btn-ghost" href="#/fulltest">Full Test</a>
+          </div>
+          <ul class="hero-points">
+            <li><span class="dot"></span>Answer input only — no multiple choice</li>
+            <li><span class="dot"></span>Instant feedback with the fastest mental shortcut</li>
+            <li><span class="dot"></span>Adaptive weak-area training and mistake review</li>
+          </ul>
+        </div>
+        <div class="landing-art" aria-hidden="true">
+          <div class="art-card">
+            <div class="art-head"><span class="art-chip">LIVE</span><span class="art-pulse"></span></div>
+            <p class="art-q">A car runs at 90 km/h. How many km in 20 minutes?</p>
+            <div class="art-input">30 km</div>
+            <div class="art-feedback">
+              <span class="art-icon art-ok"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 12l5 5L20 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <span>Correct. 20 min = 1/3 hour. 90 / 3 = 30.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-dashboard">
+    <section class="screen">
+      <div class="screen-head">
+        <div><p class="eyebrow" id="dashGreeting">Good day</p><h1 class="screen-title">Mental Math Arena</h1></div>
+        <div class="streak-pill" aria-label="Current streak">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 2c1 3 4 4 4 8a4 4 0 1 1-8 0c0-2 1-3 2-4-.4 2 .4 3 2 3 0-2-1-4 0-7z" fill="currentColor"/></svg>
+          <span id="dashStreak">0-day streak</span>
+        </div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi"><span class="kpi-label">Accuracy</span><span class="kpi-value" id="kpiAccuracy">&mdash;</span></div>
+        <div class="kpi"><span class="kpi-label">Questions solved</span><span class="kpi-value" id="kpiSolved">0</span></div>
+        <div class="kpi"><span class="kpi-label">Average time</span><span class="kpi-value" id="kpiAvgTime">&mdash;</span></div>
+        <div class="kpi"><span class="kpi-label">Best score</span><span class="kpi-value" id="kpiBest">&mdash;</span></div>
+      </div>
+      <h2 class="section-title">Practice modes</h2>
+      <div class="mode-grid">
+        <a class="mode-card" href="#/practice"><div class="mode-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 4l14 8-14 8V4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><h3>Quick Practice</h3><p>10 questions, no pressure, instant feedback.</p></a>
+        <a class="mode-card" href="#/timed"><div class="mode-icon"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 9v4l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><h3>Timed Quiz</h3><p>20 questions under a 10-minute countdown.</p></a>
+        <a class="mode-card" href="#/fulltest"><div class="mode-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 4h16v16H4z M8 8h8M8 12h8M8 16h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><h3>Full Test</h3><p>50-question exam-style session, mixed categories.</p></a>
+        <a class="mode-card" href="#/weak"><div class="mode-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M5 19l3-3M16 8l3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><h3>Weak Areas</h3><p>Auto-targeted practice from your weakest categories.</p></a>
+        <a class="mode-card" href="#/mistakes"><div class="mode-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l9 16H3l9-16z M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div><h3>Mistake Review</h3><p>Practice the questions you got wrong.</p></a>
+        <a class="mode-card" href="#/categories"><div class="mode-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div><h3>By Category</h3><p>Focus on a single topic at a time.</p></a>
+      </div>
+      <h2 class="section-title">Performance overview</h2>
+      <div class="card">
+        <div id="categoryBars" class="bar-list" aria-label="Category performance"></div>
+        <p class="muted" id="categoryEmpty" hidden>Practice at least one quiz to see category performance.</p>
+      </div>
+      <h2 class="section-title">Recent activity</h2>
+      <div class="card" id="recentActivity">
+        <p class="muted">No sessions yet. Start a practice to see your activity here.</p>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-categories">
+    <section class="screen">
+      <div class="screen-head"><div><p class="eyebrow">Practice</p><h1 class="screen-title">Choose a category</h1></div></div>
+      <div class="cat-grid" id="catGrid"></div>
+    </section>
+  </template>
+
+  <template id="tpl-settings">
+    <section class="screen">
+      <div class="screen-head"><div><p class="eyebrow">App</p><h1 class="screen-title">Settings</h1></div></div>
+      <form id="settingsForm" class="settings-form card">
+        <div class="setting-row"><label for="setTheme">Theme</label><select id="setTheme"><option value="light">Light</option><option value="dark">Dark</option><option value="auto">Auto (system)</option></select></div>
+        <div class="setting-row"><label for="setSound">Sound effects</label><input type="checkbox" id="setSound" /></div>
+        <div class="setting-row"><label for="setTimer">Show timer during practice</label><input type="checkbox" id="setTimer" /></div>
+        <div class="setting-row"><label for="setHint">Allow hints in practice mode</label><input type="checkbox" id="setHint" /></div>
+        <div class="setting-row"><label for="setDifficulty">Default difficulty</label><select id="setDifficulty"><option>Easy</option><option>Medium</option><option>Hard</option><option>Expert</option><option>Mixed</option></select></div>
+        <div class="setting-row"><label for="setCount">Default number of questions</label><input type="number" id="setCount" min="5" max="100" step="1" /></div>
+        <div class="setting-row"><label for="setGoal">Daily practice goal (questions)</label><input type="number" id="setGoal" min="5" max="500" step="1" /></div>
+        <div class="setting-row"><label for="setMotion">Reduce motion</label><input type="checkbox" id="setMotion" /></div>
+        <div class="setting-actions">
+          <button type="submit" class="btn btn-primary">Save settings</button>
+          <button type="button" class="btn btn-ghost" id="resetData">Reset all local data</button>
+        </div>
+      </form>
+    </section>
+  </template>
+
+  <template id="tpl-history">
+    <section class="screen">
+      <div class="screen-head"><div><p class="eyebrow">History</p><h1 class="screen-title">Previous sessions</h1></div></div>
+      <div class="card" id="historyList"></div>
+    </section>
+  </template>
+
+  <template id="tpl-patterns">
+    <section class="screen">
+      <div class="screen-head">
+        <div><p class="eyebrow">Library</p><h1 class="screen-title">Mental math patterns</h1></div>
+        <input type="search" id="patternSearch" class="search-input" placeholder="Search patterns..." aria-label="Search patterns" />
+      </div>
+      <div id="patternList" class="pattern-list"></div>
+    </section>
+  </template>
+
+  <template id="tpl-coach">
+    <section class="screen">
+      <div class="screen-head"><div><p class="eyebrow">Coaching</p><h1 class="screen-title">AI coach</h1></div></div>
+      <div class="card" id="coachOutput"></div>
+    </section>
+  </template>
+
+  <template id="tpl-auth">
+    <section class="screen auth-screen">
+      <div class="auth-card card">
+        <div class="auth-tabs" role="tablist">
+          <button class="auth-tab active" data-tab="login" role="tab" aria-selected="true">Sign in</button>
+          <button class="auth-tab" data-tab="register" role="tab" aria-selected="false">Create account</button>
+        </div>
+        <form id="loginForm" class="auth-form">
+          <h2>Welcome back</h2>
+          <p class="muted">Sign in to keep your stats and progress.</p>
+          <label>Email <input type="email" name="email" required autocomplete="email" /></label>
+          <label>Password <input type="password" name="password" required autocomplete="current-password" minlength="6" /></label>
+          <button class="btn btn-primary" type="submit">Sign in</button>
+          <p class="auth-msg" id="loginMsg"></p>
+        </form>
+        <form id="registerForm" class="auth-form" hidden>
+          <h2>Create your account</h2>
+          <p class="muted">All data is stored locally on this device.</p>
+          <label>Name <input type="text" name="name" required autocomplete="name" /></label>
+          <label>Email <input type="email" name="email" required autocomplete="email" /></label>
+          <label>Password <input type="password" name="password" required autocomplete="new-password" minlength="6" /></label>
+          <label>Confirm password <input type="password" name="confirm" required autocomplete="new-password" minlength="6" /></label>
+          <button class="btn btn-primary" type="submit">Create account</button>
+          <p class="auth-msg" id="registerMsg"></p>
+        </form>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-account">
+    <section class="screen">
+      <div class="screen-head"><div><p class="eyebrow">Account</p><h1 class="screen-title" id="accName">Account</h1></div></div>
+      <div class="card">
+        <dl class="kv">
+          <div><dt>Email</dt><dd id="accEmail">&mdash;</dd></div>
+          <div><dt>Member since</dt><dd id="accSince">&mdash;</dd></div>
+          <div><dt>Questions solved</dt><dd id="accSolved">0</dd></div>
+          <div><dt>Accuracy</dt><dd id="accAccuracy">&mdash;</dd></div>
+        </dl>
+        <div class="setting-actions">
+          <button class="btn btn-ghost" id="logoutBtn">Sign out</button>
+        </div>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-quiz">
+    <section class="screen quiz-screen">
+      <div class="quiz-top">
+        <div class="quiz-meta">
+          <span class="quiz-label">MENTAL MATH</span>
+          <span class="quiz-progress" id="qProgress">Question 1 / 10</span>
+        </div>
+        <div class="quiz-progressbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="qProgressbar"><span></span></div>
+        <div class="quiz-timer" id="qTimer" hidden>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 9v4l3 2M9 3h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span id="qTimerText">00:00</span>
+        </div>
+      </div>
+      <div class="quiz-card card" id="quizCard">
+        <div class="quiz-cat" id="qCategory">Category</div>
+        <div class="quiz-q" id="qText">Question</div>
+        <form class="quiz-form" id="quizForm" autocomplete="off">
+          <label for="qInput" class="visually-hidden">Your answer</label>
+          <input type="text" id="qInput" name="answer" placeholder="Type your answer..." inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false" />
+          <div class="quiz-actions">
+            <button type="button" class="btn btn-ghost" id="qHint" hidden>
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c1 1 2 2 2 4h4c0-2 1-3 2-4a7 7 0 0 0-4-12z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+              Hint
+            </button>
+            <button type="submit" class="btn btn-primary" id="qSubmit">Submit Answer</button>
+          </div>
+        </form>
+        <p class="quiz-hint" id="qHintText" hidden></p>
+      </div>
+      <div class="quiz-feedback card" id="quizFeedback" hidden aria-live="polite">
+        <div class="fb-head" id="fbHead"></div>
+        <div class="fb-answers" id="fbAnswers"></div>
+        <div class="fb-section"><h3>Fast mental trick</h3><p id="fbShortcut"></p></div>
+        <div class="fb-section"><h3>Why it works</h3><p id="fbExplanation"></p></div>
+        <div class="fb-section"><h3>Mental pattern</h3><p id="fbPattern"></p></div>
+        <div class="fb-section" id="fbMistakeBlock" hidden><h3>Common mistake</h3><p id="fbMistake"></p></div>
+        <div class="fb-actions">
+          <button class="btn btn-ghost" id="fbTrySimilar">Try similar question</button>
+          <button class="btn btn-primary" id="fbNext">Next Question</button>
+        </div>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-result">
+    <section class="screen result-screen">
+      <div class="result-head card">
+        <div class="result-badge">
+          <svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true"><path d="M6 4h12v6a6 6 0 1 1-12 0V4zM4 4h2M18 4h2M9 18h6M10 22h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <h1>Test complete</h1>
+        <p class="result-sub" id="resModeLabel">Quick Practice</p>
+        <div class="result-score" id="resScore">0 / 0</div>
+        <div class="result-grid">
+          <div><span class="r-label">Accuracy</span><span class="r-value" id="resAccuracy">0%</span></div>
+          <div><span class="r-label">Average time</span><span class="r-value" id="resAvg">&mdash;</span></div>
+          <div><span class="r-label">Fastest answer</span><span class="r-value" id="resFast">&mdash;</span></div>
+          <div><span class="r-label">Correct</span><span class="r-value" id="resCorrect">0</span></div>
+          <div><span class="r-label">Incorrect</span><span class="r-value" id="resWrong">0</span></div>
+        </div>
+      </div>
+      <h2 class="section-title">Category breakdown</h2>
+      <div class="card"><div id="resCategoryBars" class="bar-list"></div></div>
+      <h2 class="section-title">Questions to review</h2>
+      <div class="card" id="resReview"></div>
+      <div class="result-actions">
+        <a class="btn btn-ghost" href="#/dashboard">Back to dashboard</a>
+        <a class="btn btn-primary" href="#/practice">Practice again</a>
+      </div>
+    </section>
+  </template>
+
+  <script src="js/icons.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/generator.js"></script>
+  <script src="js/normalize.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/quiz.js"></script>
+  <script src="js/stats.js"></script>
+  <script src="js/coach.js"></script>
+  <script src="js/patterns.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
