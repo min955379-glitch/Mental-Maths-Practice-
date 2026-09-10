@@ -1,7 +1,9 @@
 # Bug-review response — v1.1.1
 
-**Trigger:** `BUGS.md` — a deep, file-by-file review of `min955379-glitch/Mental-Maths-Practice-`
-at `b7ca79a` (5 confirmed bugs + ~40 observations).
+**Trigger:** [`BUGS.md`](BUGS.md) — a deep, file-by-file review of
+`min955379-glitch/Mental-Maths-Practice-` at `b7ca79a` (5 confirmed bugs +
+~40 observations). The review is archived in this repository; this document is
+the response to it.
 **Resolved in:** v1.1.1 (`versionCode 3`), commit series ending the v1.1.1 release.
 **Verification:** 14/14 end-to-end + 15/15 regression tests, run against **both** the PWA
 source and the `assets/` extracted from the finished APK.

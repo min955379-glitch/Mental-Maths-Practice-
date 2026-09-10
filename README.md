@@ -33,8 +33,11 @@ ISCSP exam preparation.
 ├── pwa/                              # ★ The app itself: self-contained PWA (offline, installable)
 ├── backend/                          # Optional Node + Prisma backend (earlier full-stack iteration)
 ├── frontend/                         # Optional React + Vite frontend (earlier full-stack iteration)
+├── docs/
+│   └── screenshots/                  # App screenshots (dashboard, practice screen)
 ├── tests/                            # JSDOM e2e + regression suites for the PWA
-├── BUGFIX-REPORT.md                  # Answer to the deep code review (BUGS.md), item by item
+├── BUGS.md                           # The deep code review that triggered v1.1.1 (CLOSED)
+├── BUGFIX-REPORT.md                  # Answer to that review, item by item
 ├── ROADMAP.md                        # What is done, what is next, what is planned
 └── README.md                         # This file
 ```
@@ -334,9 +337,10 @@ fails against the pre-fix source.
 
 ### Step 19 — v1.1.1: deep code-review bug sweep (BUGS.md)
 
-An independent line-by-line review of every file (see `BUGS.md`) reported
-5 confirmed bugs plus ~40 observations. All of them are now resolved or
-answered item by item in [`BUGFIX-REPORT.md`](BUGFIX-REPORT.md).
+An independent line-by-line review of every file ([`BUGS.md`](BUGS.md), now
+archived in this repo) reported 5 confirmed bugs plus ~40 observations. All of
+them are now resolved or answered item by item in
+[`BUGFIX-REPORT.md`](BUGFIX-REPORT.md).
 
 **Confirmed bugs — fixed**
 
