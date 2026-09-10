@@ -98,9 +98,12 @@
         ? snapshot.remainingSec
         : (session.timeLimitSec || 0);
       this._startTimer();
-      // Remove from unfinished now that we've resumed. The next tick /
-      // submit will re-save a fresh snapshot for the resumed session.
-      StateStore.removeUnfinished(session.id);
+      // Re-save the snapshot immediately. The unfinished entry is NOT removed
+      // here: if the user leaves straight after resuming (without answering
+      // anything) the session must still be waiting on the dashboard. It is
+      // cleared by finish(), quit(), discard, or an explicit removal once the
+      // session is genuinely over.
+      this._saveSnapshot();
     },
     _newProgress(session) {
       return { startedAt: new Date().toISOString(), entries: session.questionCache.map(() => ({ userAnswer: '', isCorrect: false, responseTimeMs: 0, hintsUsed: 0 })) };
@@ -123,7 +126,11 @@
     },
     stopTimer() { if(this.timerHandle) clearInterval(this.timerHandle); this.timerHandle = null; },
     currentQuestion() { if(!this.current) return null; return this.current.questionCache[this.index]; },
-    isQuestionAnswered(idx) { return !!(this.progress && this.progress.entries[idx] && this.progress.entries[idx].isCorrect === true || (this.progress && this.progress.entries[idx] && this.progress.entries[idx].userAnswer)); },
+    isQuestionAnswered(idx) {
+      const e = this.progress && this.progress.entries ? this.progress.entries[idx] : null;
+      if (!e) return false;
+      return !!(e.isCorrect === true || (e.userAnswer !== '' && e.userAnswer != null));
+    },
     isQuestionCorrect(idx) { return !!(this.progress && this.progress.entries[idx] && this.progress.entries[idx].isCorrect); },
     hintsUsedForCurrent() { if(!this.progress || !this.progress.entries[this.index]) return 0; return this.progress.entries[this.index].hintsUsed || 0; },
     markHintUsed() { if(this.progress && this.progress.entries[this.index]) { this.progress.entries[this.index].hintsUsed = (this.progress.entries[this.index].hintsUsed || 0) + 1; this._saveSnapshot(); } },
@@ -184,6 +191,7 @@
       snap.lastSavedAt = new Date().toISOString();
       snap.completedAt = null;
       StateStore.saveUnfinishedSnapshot(snap);
+      return snap;
     },
     // Quit the quiz without finishing — saves progress and triggers onFinish
     // with a synthetic "quit" session that the caller can detect via
@@ -196,8 +204,30 @@
       session._quit = true;
       this.current = null;
       this.progress = null;
+      this._detachCallbacks();
       if (this.onFinish) this.onFinish(session);
       return session;
+    },
+    // Pause without any UI decision: used when the user navigates away from
+    // the quiz screen (Android Back button, side-nav link, hash change).
+    // The countdown must stop, the snapshot must be stored, and no callback
+    // may fire into whatever screen is rendered next.
+    pause() {
+      if (!this.current) return null;
+      const snap = this._saveSnapshot();
+      this.stopTimer();
+      this.current = null;
+      this.progress = null;
+      this._detachCallbacks();
+      return snap;
+    },
+    isActive() { return !!this.current; },
+    _detachCallbacks() {
+      this.onTick = null;
+      this.onTimeout = null;
+      this.onFeedback = null;
+      this.onAdvance = null;
+      this.onFinish = null;
     }
   };
   window.QuizEngine = { Quiz, buildSession, findQuestion, snapshotToSession };

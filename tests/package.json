@@ -1,0 +1,13 @@
+{
+  "name": "mental-maths-practice-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JSDOM end-to-end tests for the Mental Maths Practice PWA",
+  "type": "module",
+  "scripts": {
+    "test": "node pwa.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}

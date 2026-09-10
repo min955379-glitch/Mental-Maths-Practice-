@@ -53,55 +53,65 @@
     const primary = unfinished[0];
     const others = unfinished.slice(1);
 
-    function buildCard(snap, primary) {
+    function buildCard(snap, isPrimary) {
       const total = (snap.questionCache || []).length || snap.count || 0;
+      if (!total) return null;
       const idx = Math.min(snap.currentIndex || 0, Math.max(0, total - 1));
       const answered = (snap.progress && Array.isArray(snap.progress.entries))
-        ? snap.progress.entries.filter(e => e && (e.userAnswer !== '' || e.isCorrect)).length
+        ? snap.progress.entries.filter(e => e && (e.userAnswer !== '' && e.userAnswer != null || e.isCorrect)).length
         : idx;
       const remaining = Math.max(0, total - answered);
       const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
       const title = modeLabel(snap);
-      const card = el('div', {class: 'continue-card card' + (primary ? ' primary' : '')});
+      const card = el('div', {class: 'continue-card card' + (isPrimary ? ' primary' : '')});
+      card.setAttribute('data-session-id', String(snap.id));
       const head = el('div', {class: 'continue-head'});
-      const icon = el('span', {class: 'continue-icon', html: window.Icons.play});
-      head.appendChild(icon);
+      head.appendChild(el('span', {class: 'continue-icon', html: window.Icons.play}));
       const meta = el('div', {class: 'continue-meta'});
-      meta.appendChild(el('h3', null, primary ? 'Continue Quiz' : 'Another unfinished quiz'));
+      meta.appendChild(el('h3', null, isPrimary ? 'Continue Quiz' : 'Unfinished quiz'));
       meta.appendChild(el('div', {class: 'continue-sub'}, title));
       head.appendChild(meta);
       card.appendChild(head);
       const stats = el('div', {class: 'continue-stats'});
-      stats.appendChild(el('span', {class: 'cs-pill'}, answered + ' / ' + total + ' questions completed'));
-      stats.appendChild(el('span', {class: 'cs-pill soft'}, pct + '% complete'));
+      stats.appendChild(el('span', {class: 'cs-pill'}, answered + ' / ' + total + ' completed'));
+      stats.appendChild(el('span', {class: 'cs-pill soft'}, pct + '%'));
       stats.appendChild(el('span', {class: 'cs-pill soft'}, remaining + ' remaining'));
+      if (snap.timeLimitSec && snap.remainingSec != null) {
+        stats.appendChild(el('span', {class: 'cs-pill soft'}, Stats.formatMs(snap.remainingSec * 1000) + ' left'));
+      }
       card.appendChild(stats);
-      const bar = el('div', {class: 'quiz-progressbar'}); bar.setAttribute('role','progressbar'); bar.setAttribute('aria-valuemin','0'); bar.setAttribute('aria-valuemax','100'); bar.setAttribute('aria-valuenow', String(pct));
+      const bar = el('div', {class: 'quiz-progressbar'});
+      bar.setAttribute('role', 'progressbar');
+      bar.setAttribute('aria-valuemin', '0');
+      bar.setAttribute('aria-valuemax', '100');
+      bar.setAttribute('aria-valuenow', String(pct));
       const fill = el('span'); fill.style.width = pct + '%'; bar.appendChild(fill);
       card.appendChild(bar);
       const actions = el('div', {class: 'continue-actions'});
-      const contBtn = el('button', {class: 'btn btn-primary', type: 'button', onclick: () => { location.hash = '#/resume?id=' + encodeURIComponent(snap.id); }}, primary ? 'Continue Quiz' : 'Resume');
-      contBtn.appendChild(el('span', {html: window.Icons.play}));
-      const contLabel = primary ? 'Continue Quiz' : 'Resume';
-      contBtn.innerHTML = '';
-      const playIco = el('span', {class: 'btn-icon', html: window.Icons.play});
-      contBtn.appendChild(playIco);
-      contBtn.appendChild(document.createTextNode(' ' + contLabel));
+      const contBtn = el('button', {class: 'btn btn-primary', type: 'button', onclick: () => { location.hash = '#/resume?id=' + encodeURIComponent(snap.id); }});
+      contBtn.appendChild(el('span', {class: 'btn-icon', html: window.Icons.play}));
+      contBtn.appendChild(document.createTextNode(' ' + (isPrimary ? 'Continue Quiz' : 'Resume')));
       actions.appendChild(contBtn);
-      const discardBtn = el('button', {class: 'btn btn-ghost', type: 'button', onclick: () => { if(confirm('Discard this unfinished quiz? Your progress will be lost.')) { StateStore.removeUnfinished(snap.id); renderContinueQuiz(host); } }}, 'Discard');
+      const discardBtn = el('button', {class: 'btn btn-ghost', type: 'button', onclick: () => {
+        if (confirm('Discard this unfinished quiz? Your progress will be lost.')) {
+          StateStore.removeUnfinished(snap.id);
+          renderContinueQuiz(host);
+        }
+      }}, 'Discard');
       actions.appendChild(discardBtn);
       card.appendChild(actions);
       return card;
     }
 
-    host.appendChild(buildCard(primary, true));
+    const primaryCard = buildCard(primary, true);
+    if (primaryCard) host.appendChild(primaryCard);
     if (others.length) {
       const wrap = el('div', {class: 'continue-others'});
       const summary = el('details');
       const sum = el('summary', null, 'Other unfinished quizzes (' + others.length + ')');
       summary.appendChild(sum);
       const body = el('div', {class: 'continue-others-body'});
-      others.forEach(s => body.appendChild(buildCard(s, false)));
+      others.forEach(s => { const c = buildCard(s, false); if (c) body.appendChild(c); });
       summary.appendChild(body);
       wrap.appendChild(summary);
       host.appendChild(wrap);
@@ -144,8 +154,13 @@
     });
     document.getElementById('resetData').addEventListener('click', () => { if(confirm('This will delete all local data, sessions, attempts, and account. Continue?')) { StateStore.resetAll(); localStorage.removeItem('iscsp-mm-accounts-v1'); showToast('All local data reset', 'success'); location.hash = '#/dashboard'; route(); } });
   }
-  function renderHistory(main) { const tpl = document.getElementById('tpl-history'); main.appendChild(tpl.content.cloneNode(true)); const list = document.getElementById('historyList'); const sessions = Stats.recentSessions(100); if(sessions.length === 0) { list.appendChild(el('p', {class:'muted'}, 'No sessions yet.')); return; } sessions.forEach(s => { const score = Math.round((s.correct/Math.max(1,s.count))*100); const item = el('div', {class:'history-item'}); item.appendChild(el('div', {class:'hi-mode'}, modeLabel(s))); item.appendChild(el('div', {class:'hi-score'}, s.correct+'/'+s.count+' - '+score+'% - '+Stats.formatTime(s.totalResponseTimeMs/Math.max(1,s.count)))); item.appendChild(el('div', {class:'hi-time'}, new Date(s.startedAt).toLocaleString())); item.appendChild(el('button', {class:'btn btn-ghost btn-sm', type:'button', onclick: () => { if(confirm('Delete this session from history?')) { deleteSession(s.id); renderHistory(main); } }}, 'Delete')); }); }
-  function deleteSession(id) { const s = StateStore.getSessions().filter(x => x.id !== id); localStorage.setItem('iscsp-mm-state-v1', JSON.stringify(Object.assign({}, StateStore.State.data, { sessions: s }))); }
+  function renderHistory(main) { const tpl = document.getElementById('tpl-history'); main.appendChild(tpl.content.cloneNode(true)); const list = document.getElementById('historyList'); const sessions = Stats.recentSessions(100); if(sessions.length === 0) { list.appendChild(el('p', {class:'muted'}, 'No sessions yet.')); return; } sessions.forEach(s => { const score = Math.round((s.correct/Math.max(1,s.count))*100); const item = el('div', {class:'history-item'}); item.appendChild(el('div', {class:'hi-mode'}, modeLabel(s))); item.appendChild(el('div', {class:'hi-score'}, s.correct+'/'+s.count+' - '+score+'% - '+Stats.formatTime(s.totalResponseTimeMs/Math.max(1,s.count)))); item.appendChild(el('div', {class:'hi-time'}, new Date(s.startedAt).toLocaleString())); item.appendChild(el('button', {class:'btn btn-ghost btn-sm', type:'button', onclick: () => { if(confirm('Delete this session from history?')) { deleteSession(s.id); renderHistory(main); } }}, 'Delete'));
+    list.appendChild(item);
+  }); }
+  function deleteSession(id) {
+    StateStore.State.data.sessions = StateStore.State.data.sessions.filter(x => x.id !== id);
+    StateStore.save();
+  }
   function renderPatterns(main) {
     const tpl = document.getElementById('tpl-patterns'); main.appendChild(tpl.content.cloneNode(true));
     const list = document.getElementById('patternList'); const searchInput = document.getElementById('patternSearch');
@@ -165,6 +180,9 @@
 
   // -- Quiz screen ---------------------------------------------------------
   function startQuiz(main, mode, opts) {
+    // Starting a new session while one is running would orphan the running
+    // one; pause (i.e. save) it first so it stays on the dashboard.
+    pauseActiveQuiz('');
     const session = window.QuizEngine.buildSession(mode, opts || {});
     if(!session.questionCache.length) { showToast('Could not build quiz. Try again.', 'error'); return; }
     // If a session with this id was previously saved as unfinished, the
@@ -203,29 +221,34 @@
 
     // Hint button -------------------------------------------------------------
     const hintBtn = document.getElementById('qHint');
-    if (settings.hintMode && session.mode !== 'fulltest') {
-      hintBtn.hidden = false;
-      // If hint was already used on this question, show the hint and mark
-      // the button as already activated (so the click is idempotent).
-      const alreadyUsed = (window.QuizEngine.Quiz.hintsUsedForCurrent && window.QuizEngine.Quiz.hintsUsedForCurrent() > 0);
-      if (alreadyUsed) {
-        showHint();
-        markHintActivated();
-      }
-      hintBtn.onclick = (e) => {
-        e.preventDefault();
-        if (hintBtn.classList.contains('activated')) return; // Prevent duplicate hints.
+    if (hintBtn) {
+      const hintsAllowed = settings.hintMode !== false && session.mode !== 'fulltest';
+      if (hintsAllowed) {
+        hintBtn.hidden = false;
+        // If a hint was already used on this question (for example after a
+        // resume), show it again and mark the button as already activated so
+        // the click is idempotent.
         if (window.QuizEngine.Quiz.hintsUsedForCurrent() > 0) {
           showHint();
           markHintActivated();
-          return;
         }
-        showHint();
-        window.QuizEngine.Quiz.markHintUsed();
-        markHintActivated();
-      };
-    } else {
-      hintBtn.hidden = true;
+        hintBtn.onclick = (e) => {
+          e.preventDefault();
+          if (hintBtn.classList.contains('activated')) return; // no duplicates
+          if (window.QuizEngine.Quiz.hintsUsedForCurrent() > 0) {
+            showHint();
+            markHintActivated();
+            return;
+          }
+          showHint();
+          window.QuizEngine.Quiz.markHintUsed();
+          markHintActivated();
+        };
+      } else {
+        hintBtn.hidden = true;
+        hintBtn.classList.remove('activated');
+        hintBtn.disabled = false;
+      }
     }
 
     // Quit button --------------------------------------------------------------
@@ -252,12 +275,40 @@
     document.getElementById('quizForm').addEventListener('submit', (e) => { e.preventDefault(); const val = input.value; if(val.trim() === '') { showToast('Type an answer first.', 'error'); return; } window.QuizEngine.Quiz.submit(val); });
   }
 
+  // Build the hint text for the current question. Never throws, and never
+  // returns something that simply hands over the answer.
+  function computeHint(q) {
+    if (!q) return 'Read the question carefully and identify what it is asking for first.';
+    let text = '';
+    try {
+      if (window.Hints && typeof window.Hints.hintFor === 'function') text = window.Hints.hintFor(q);
+    } catch (e) { text = ''; }
+    if (!text && window.Hints && window.Hints.CATEGORY_HINTS) {
+      const list = window.Hints.CATEGORY_HINTS[q.category];
+      if (list && list.length) text = list[Math.floor(Math.random() * list.length)];
+    }
+    if (!text) text = 'Break the problem into smaller, friendlier steps and solve each one.';
+    // Last line of defence: if the text still contains the answer, fall back.
+    try {
+      const answer = String(q.correctAnswer == null ? '' : q.correctAnswer).trim();
+      if (answer && text.toLowerCase().indexOf(answer.toLowerCase()) !== -1) {
+        text = 'Identify the pattern this question is testing, then apply it step by step.';
+      }
+    } catch (e) {}
+    return text;
+  }
+
   function showHint() {
     const wrap = document.getElementById('qHintText');
     if (!wrap) return;
     const q = window.QuizEngine.Quiz.currentQuestion();
     if (!q) return;
-    wrap.textContent = window.Hints.hintFor(q);
+    // Idempotent: once a hint is on screen for this question, keep the same
+    // text instead of rolling a new one on every repeat click.
+    if (wrap.dataset.questionId !== String(q.id) || !wrap.textContent) {
+      wrap.dataset.questionId = String(q.id);
+      wrap.textContent = computeHint(q);
+    }
     wrap.hidden = false;
     // Smooth reveal with a tiny animation.
     wrap.classList.remove('show');
@@ -337,8 +388,22 @@
     if (queryPart) queryPart.split('&').forEach(p => { const [k,v] = p.split('='); params[decodeURIComponent(k)] = decodeURIComponent(v||''); });
     return { path: pathPart, params };
   }
+  // If a quiz is in flight and the user navigates anywhere else (Android Back
+  // button, side-nav link, any hash change), pause it before rendering: stop
+  // the countdown, persist the snapshot and detach the callbacks so nothing
+  // can fire into the screen we are about to draw.
+  function pauseActiveQuiz(nextPath) {
+    const engine = window.QuizEngine && window.QuizEngine.Quiz;
+    if (!engine || typeof engine.isActive !== 'function') return;
+    if (!engine.isActive()) return;
+    if (nextPath === '/resume') return;
+    engine.pause();
+  }
+
   function route() {
-    const { path, params } = parseRoute(); const main = document.getElementById('main'); clear(main); main.scrollTop = 0; window.scrollTo(0,0);
+    const { path, params } = parseRoute();
+    pauseActiveQuiz(path);
+    const main = document.getElementById('main'); clear(main); main.scrollTop = 0; window.scrollTo(0,0);
     const sidenav = document.getElementById('sidenav'); if (sidenav) sidenav.classList.remove('open'); const scrim = document.getElementById('scrim'); if (scrim) scrim.classList.remove('show'); const toggle = document.getElementById('navToggle'); if (toggle) toggle.setAttribute('aria-expanded', 'false');
     let routeName = path.replace(/^\//, '') || 'dashboard'; setActiveNav(routeName);
     if (path === '/' || path === '' || path === '#/') renderLanding(main);

@@ -359,3 +359,12 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--c-indigo
 [data-reduced-motion="true"] *, [data-reduced-motion="true"] *::before, [data-reduced-motion="true"] *::after {
   transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
 }
+
+/* Inline icon wrapper inside buttons (play icon on Continue Quiz, tick on Hint) */
+.btn-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.btn-icon svg { display: block; }
+/* On narrow screens stack the Continue Quiz actions full-width */
+@media (max-width: 480px) {
+  .continue-actions { flex-direction: column-reverse; align-items: stretch; }
+  .continue-actions .btn { width: 100%; }
+}

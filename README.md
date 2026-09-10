@@ -188,6 +188,71 @@ reflects the exact state of the work.
   - 37 `×` and 15 `−` instances in `data.js`; 0 `*` in user-facing math
   - `km/h` and `1/3` preserved as unit/fraction notation
 
+### Step 17 — Hint button + Continue Quiz (resumable sessions)
+
+**Hint button (fixed).** The Hint button on the quiz screen was wired to a hint
+library that was never shipped inside the installed app, so clicking it did
+nothing. The hint engine now lives in `pwa/js/hints.js` and is part of every
+build:
+
+- Hints are generated from the **actual question** — its numbers, units and
+  wording — so a percentage question gets a percentage hint, a speed/time
+  question gets a speed/time hint, and so on for all 18 categories.
+- A hint explains the **method**, never the result. Every hint passes through
+  an answer-safety guard: if it would contain (or numerically match) the
+  correct answer, it is replaced with a safe methodology nudge.
+  Example — *"What is 15% of 240?"* gives
+  *"Try splitting 15% into 10% + 5% pieces..."*, never *"24 + 12 = 36"*.
+- The hint fades in smoothly (no page reload), the button switches to a green
+  **"Hint shown"** state with a tick icon, disables itself, and repeat clicks
+  never duplicate or re-roll the hint.
+- Hints respect settings: off in Full Test, off when "Allow hints" is disabled.
+- Works on mobile and desktop (verified at 360px and desktop widths).
+
+**Continue Quiz (new).** Unfinished quizzes are now saved automatically and
+can be resumed from the dashboard:
+
+- The session is snapshotted on **every answer, every timer tick, every
+  question advance, and whenever the user leaves the quiz** — including the
+  Android Back button and any navigation away from the quiz screen.
+- The dashboard shows a **Continue Quiz** card with the mode, `7 / 20
+  completed`, a progress bar, the percentage, the remaining questions, the
+  countdown left (timed quizzes) and a **Continue Quiz** button with an SVG
+  play icon.
+- Resuming restores the exact question index, the original question order,
+  every previous answer, the correct/incorrect flags and timings, the mode,
+  category, difficulty, question count and the remaining timer. Nothing is
+  regenerated and nothing resets.
+- Multiple unfinished quizzes coexist (capped at 10, newest first); older ones
+  sit in a collapsible "Other unfinished quizzes" list with a **Discard**
+  action. One quiz never overwrites another.
+- **Quit Quiz** asks *"Are you sure you want to leave? Your progress will be
+  saved."* — confirming saves and returns to the dashboard, cancelling keeps
+  you in the quiz.
+- Finishing a quiz removes it from Continue Quiz and keeps it in History and
+  Results. A finished session can never reappear as unfinished.
+
+**Bug fixed along the way:** `apk/app/src/main/assets/` was listed in
+`.gitignore`, so new PWA files (notably `hints.js`) were silently never
+committed to the copy bundled inside the APK. The rule has been removed and
+the assets are re-synced from `pwa/`.
+
+### Tests
+
+A JSDOM end-to-end suite drives the real app (real HTML, real modules, real
+router, real localStorage):
+
+```bash
+cd tests && npm install && npm test
+```
+
+14 scenarios cover the full journey: hint generation, the hint button,
+auto-save on Back, the Continue card, surviving a refresh, resume fidelity,
+timer preservation, multiple unfinished quizzes, discard, quit confirmation,
+completion/cleanup, and regressions on existing screens. It also stress-tests
+the hint engine over 1,550 questions (every seed question plus generated ones)
+to guarantee no hint ever reveals its answer.
+
 ## How to run the PWA locally
 
 ```bash
