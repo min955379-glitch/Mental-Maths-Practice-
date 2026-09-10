@@ -17,6 +17,7 @@ apk/build/
 apk/.gradle/
 apk/local.properties
 apk/app/release/
-apk/*.apk.idsig            # v4 APK signature block, regenerable
+# v4 APK signature block (regenerable)
+apk/*.apk.idsig
 tests/node_modules
 apk/build-offline/

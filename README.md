@@ -3,22 +3,33 @@
 A complete, polished, production-quality mental-math training platform for
 ISCSP exam preparation.
 
+> **Latest release — v1.1.0 (2026-09-10).** Signed Android APK:
+> [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 515 KB,
+> versionCode 2, signed with the release key (v1 + v2 + v3 verified). It
+> installs as an in-place update over earlier builds and keeps your progress.
+> This release fixes the dead **Hint button** and adds **Continue Quiz**
+> (save / resume unfinished sessions). Details: [`apk/RELEASE-NOTES.md`](apk/RELEASE-NOTES.md)
+> · full plan: [`ROADMAP.md`](ROADMAP.md).
+
 ## What's in this repository
 
 ```
 .
-├── pwa/                              # Self-contained Progressive Web App (works offline, installable on Android)
 ├── apk/
-│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK (~5.2 MB)
-│   ├── app/                          # Android Studio project (Java + WebView wrapper)
+│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.1.0 (515 KB)
+│   ├── app/                          # Android project (Java + WebView wrapper)
 │   │   └── src/main/assets/          # PWA bundled inside the APK (file:///android_asset/)
 │   ├── gradle/wrapper/               # Gradle wrapper
 │   ├── release.keystore              # Signing key — back this up
-│   ├── build.sh                      # One-command rebuild script
+│   ├── build.sh                      # One-command Gradle rebuild
+│   ├── build-offline.sh              # Rebuild without Gradle, straight from the SDK tools
 │   ├── README.md                     # Full build + install instructions
 │   └── RELEASE-NOTES.md              # Release notes
-├── backend/                          # Optional Node + Prisma backend (from a previous iteration)
-├── frontend/                         # Optional React + Vite frontend (from a previous iteration)
+├── pwa/                              # ★ The app itself: self-contained PWA (offline, installable)
+├── backend/                          # Optional Node + Prisma backend (earlier full-stack iteration)
+├── frontend/                         # Optional React + Vite frontend (earlier full-stack iteration)
+├── tests/                            # JSDOM end-to-end suite for the PWA
+├── ROADMAP.md                        # What is done, what is next, what is planned
 └── README.md                         # This file
 ```
 
@@ -30,6 +41,31 @@ installs as a real Android app via Chrome's "Add to Home Screen".
 The `backend/` and `frontend/` directories contain an earlier full-stack
 iteration (Node/Express/Prisma + React/TypeScript). They are preserved
 and may be useful if you want a server-side multi-user deployment.
+
+## Install the Android app
+
+1. Download [`Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk)
+   (515 KB, v1.1.0) onto your phone — email it to yourself, use a USB cable,
+   a cloud drive, or download it straight from GitHub on the device.
+2. Tap the file. If Android asks, allow "Install from unknown sources" for
+   this file only.
+3. Tap **Install**. The app appears in your launcher as **Mental Maths Practice**.
+4. Open it — it runs fully offline. No account, no internet, no sign-in needed.
+
+Updating from an older build? Just install over it. The APK is signed with the
+same release key and has a higher `versionCode`, so it installs as an update
+and **keeps all of your stats, history and unfinished quizzes**.
+
+With a computer and USB debugging enabled: `adb install -r Mental-Maths-Practice.apk`
+
+| What | Value |
+|---|---|
+| Package | `com.iscsp.mentalmatharena` |
+| Version | versionCode 2 · versionName 1.1.0 |
+| Size | 515 KB |
+| Min / target SDK | 21 (Android 5.0) / 34 (Android 14) |
+| Signature | v1 + v2 + v3, release key SHA-256 `2d7470c4a5239d5d…` |
+| MD5 | `c0f3d00bbd62abe9d017492e57f7fa1d` |
 
 ## Live progress log
 
@@ -145,9 +181,11 @@ reflects the exact state of the work.
 - Installable on Android via Chrome → "Add to Home Screen" with one tap
 
 ### Step 15 — APK packaging
-- **APK successfully built in this environment:**
-  `apk/ISCSP-Mental-Math-Arena.apk` (4.6 MB, signed, installable on
-  Android 5.0+).
+- **APK successfully built in this environment.** The v1.0.0 build was
+  `apk/ISCSP-Mental-Math-Arena.apk` (4.6 MB) — **superseded** by
+  `apk/Mental-Maths-Practice.apk` (v1.1.0, 515 KB), which carries the same
+  signing key. The old file is kept only for reference; always ship the
+  v1.1.0 APK.
 - Architecture: native Android **WebView wrapper** that loads the PWA
   from `file:///android_asset/index.html`. The entire PWA is bundled
   inside the APK — **no internet required**, no external host required.
@@ -253,6 +291,27 @@ completion/cleanup, and regressions on existing screens. It also stress-tests
 the hint engine over 1,550 questions (every seed question plus generated ones)
 to guarantee no hint ever reveals its answer.
 
+### Step 18 — v1.1.0 released: APK built, signed and verified
+
+- **Built in this environment** with JDK 17 + Android SDK
+  (`platforms;android-34`, `build-tools;34.0.0`, `platform-tools`), using the
+  Gradle-free pipeline in `apk/build-offline.sh`.
+- **`apk/Mental-Maths-Practice.apk`** — 515 KB, `versionCode 2`,
+  `versionName 1.1.0`, package `com.iscsp.mentalmatharena`, minSdk 21 /
+  targetSdk 34.
+- **Signed with the original release key** (certificate SHA-256
+  `2d7470c4a5239d5df72090f5b0329b99efd394a305c54464b2800cb1ae129d43`) and
+  verified with **v1 + v2 + v3** signature schemes, so it installs as an
+  in-place update of earlier builds and keeps existing progress.
+- **Verified from the shipped file, not just the source:** the `assets/` folder
+  was extracted from the finished APK and the full end-to-end suite was run
+  against that exact copy — **14/14 passed** (`aapt dump badging` confirms the
+  label, `dexdump` confirms `MainActivity` is in `classes.dex`).
+- The APK shrank from 4.4 MB to 515 KB: the Gradle build was bundling
+  AndroidX (appcompat / material / webkit) that `MainActivity` never imports.
+- `apk/app/build.gradle` bumped to `versionCode 2` / `versionName "1.1.0"` so
+  future Gradle builds stay in step with the released APK.
+
 ## How to run the PWA locally
 
 ```bash
@@ -278,9 +337,32 @@ npx serve .
 
 ## How to build a real APK
 
-See [`apk/README.md`](apk/README.md). Short version: edit
-`apk/twa-manifest.json` with your hosted PWA URL, then run
-`bash apk/build.sh`. A signed APK is produced in `apk/`.
+Two supported routes — both produce the same signed APK in `apk/`. Full
+details live in [`apk/README.md`](apk/README.md).
+
+**With Gradle** (JDK 17 + Android SDK `platforms;android-34`,
+`build-tools;34.0.0`, `platform-tools`):
+
+```bash
+cd apk
+echo "sdk.dir=$ANDROID_HOME" > local.properties   # or your SDK path
+bash build.sh
+```
+
+**Without Gradle** — `MainActivity` only uses framework APIs, so the app has
+no third-party dependencies and can be built straight from the SDK tools
+(aapt2 → javac → d8 → zipalign → apksigner). This is how v1.1.0 was produced,
+and it is why the APK dropped from 4.4 MB to 515 KB (no AndroidX payload):
+
+```bash
+cd apk
+export JAVA_HOME=/path/to/jdk-17
+export ANDROID_HOME=/path/to/android-sdk
+bash build-offline.sh
+```
+
+Both scripts re-sync `pwa/` into `app/src/main/assets/` first, so the APK can
+never ship a stale copy of the app again.
 
 ## Tech stack
 
@@ -289,4 +371,7 @@ See [`apk/README.md`](apk/README.md). Short version: edit
 - localStorage for persistence
 - Service Worker for offline
 - SVG icons (zero emoji)
-- Bubblewrap / TWA for Android packaging
+- Native Android WebView wrapper for packaging (the PWA is bundled in `assets/`,
+  so the app needs no network and no hosted URL — no Bubblewrap / TWA required)
+- JDK 17 + Android SDK (aapt2, d8, zipalign, apksigner) or Gradle for the APK
+- JSDOM end-to-end tests (`tests/`) driving the real app
