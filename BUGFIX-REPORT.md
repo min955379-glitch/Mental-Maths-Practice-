@@ -132,9 +132,9 @@ no `package.json` in `pwa/` (buildless by design) · `tests/node_modules` (gitig
 | 1–2. `submit()` guard, `finish()` guard | `R1`, `R2` |
 | 3–5. `pause()`/`quit()` null-safety, timer after `finish()` | `R2`, `R3`, plus e2e 5 & 9 |
 | 6. `_origin` never consumed | intentionally retained (documented above) |
-| 7–8. `resetAll()`, history cap | `R14`, plus e2e 13 |
+| 7–8. `resetAll()`, history cap | `R14` (attempts cap), plus e2e 13 |
 | 9. attempts cap | `R14` (seeded, so it does not OOM jsdom) |
-| 10–11. unfinished cap, settings defaults | `R5`, plus e2e 10 |
+| 10–11. unfinished cap, settings defaults | `R5`, `R14`, plus e2e 10 |
 | 12–25. theme cycle, hints per category, SW cache list, manifest icons, SVG-only Continue button, timer stop on navigation, `isActive()`, resume via hash, unknown route fallback, resume with no id, hint stability | existing e2e suite + `R6`, `R7`, `R12`, `R15` |
 
 Run them with:

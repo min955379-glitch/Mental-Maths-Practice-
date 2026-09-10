@@ -292,7 +292,7 @@ cd tests && npm install && npm test
 
 ```bash
 node tests/pwa.test.mjs          # 14 end-to-end scenarios
-node tests/regressions.test.mjs  # 13 regression scenarios for the bugs in BUGS.md
+node tests/regressions.test.mjs  # 15 regression scenarios for the bugs in BUGS.md
 APP_DIR=/path/to/assets node tests/pwa.test.mjs   # test a built bundle (e.g. an APK's assets/)
 ```
 
@@ -303,12 +303,13 @@ confirmation, completion/cleanup, and regressions on existing screens. They
 also stress-test the hint engine over 1,555 questions (every seed question
 plus generated ones) to guarantee no hint ever reveals its answer.
 
-The 13 regression scenarios (`R1`–`R13`) lock in each bug fixed in v1.1.1:
+The 15 regression scenarios (`R1`–`R15`) lock in each bug fixed in v1.1.1:
 blank-answer rejection, null-safe `finish()/pause()/quit()`, throttled
 countdown persistence, local-time streaks, deterministic snapshot ordering,
 Expert question generation, toast races, no salt/hash exposure,
-`deleteSession()`, negative fraction denominators, the CSP, and the
-category empty state. Each one fails against the pre-fix source.
+`deleteSession()`, negative fraction denominators, the CSP, the category empty
+state, the 5,000-attempt history cap and `?cat=` route validation. Each one
+fails against the pre-fix source.
 
 ### Step 18 — v1.1.0 released: APK built, signed and verified
 
@@ -366,7 +367,7 @@ answered item by item in [`BUGFIX-REPORT.md`](BUGFIX-REPORT.md).
   icon stroke weights match.
 
 **Verification** — `node tests/pwa.test.mjs` → 14/14 ·
-`node tests/regressions.test.mjs` → 13/13 · hint sweep over 1,555 questions →
+`node tests/regressions.test.mjs` → 15/15 · hint sweep over 1,555 questions →
 0 missing hints, 0 answer-revealing hints. Both suites were also run against
 the `assets/` extracted from the finished APK → 27/27.
 
