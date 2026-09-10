@@ -2,7 +2,7 @@
   'use strict';
   function normSpace(s) { return (s==null?'':String(s)).trim().replace(/\s+/g,' '); }
   function stripTrailingPunct(s) { return s.replace(/[.,;:]+$/, ''); }
-  function parseFraction(s) { const m = String(s).match(/^\s*(-?\d+)\s*\/\s*(\d+)\s*$/); if(!m)return null; const a=parseInt(m[1],10); const b=parseInt(m[2],10); if(b===0)return null; return [a,b]; }
+  function parseFraction(s) { const m = String(s).match(/^\s*(-?\d+)\s*\/\s*(-?\d+)\s*$/); if(!m)return null; const a=parseInt(m[1],10); const b=parseInt(m[2],10); if(b===0)return null; return [a,b]; }
   function gcd(a,b){return b===0?Math.abs(a):gcd(b,a%b);}
   function simpFrac(a,b){const g=gcd(a,b);return [a/g,b/g];}
   function parseNumber(s) { if(s==null)return null; let t=String(s).trim(); if(t==='')return null; t=t.replace(/,/g,''); if(!/^-?\d+\/\d+$/.test(t) && !/^-?\d*\.\d+$/.test(t) && !/^-?\d+$/.test(t))return null; if(/^-?\d+\/\d+$/.test(t))return null; const n=Number(t); if(!Number.isFinite(n))return null; return n; }

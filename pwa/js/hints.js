@@ -172,6 +172,7 @@
       return 'Find 10% of the number first (shift the decimal one place), then build up to ' + p + '% with 10%, 5% and 1% pieces.';
     }
     // "20% of a number is 48. What is the number?"
+    if (/increas[^.?!]*\bthen\b[^.?!]*decreas|decreas[^.?!]*\bthen\b[^.?!]*increas/i.test(t)) return 'Do it in two steps on a starting value of 100: apply the first change, then apply the second change to the NEW value, never the original. Successive equal percent changes do not cancel out.';
     if (/%\s*of\s*(?:a|the)?\s*number/i.test(t)) return 'Call the number x. Write x times the percentage as a fraction equals the given value, then divide by that fraction (or multiply by 100/percent).';
     // percentage score from marks
     if ((m = t.match(/([\d,]+)\s*(?:marks?|points?|out of)\b[\s\S]*?out of\s*([\d,]+)/i)) || /percentage|percent\s*\?/i.test(t)) {
@@ -213,6 +214,7 @@
     if (/consecutive|odd numbers|even numbers/i.test(t)) return 'In an evenly spaced list the average is the MIDDLE term - count outwards from there to reach the ends.';
     if (/needed|make the total average|new average|5th|next test/i.test(t)) return 'Work out the total needed for the new average (new average x number of items), then subtract the total you already have.';
     if (/average of these|find the average|mean of/i.test(t)) return 'Add the values (pair a small one with a large one to make it easy), then divide by how many there are.';
+    if (/returns? at|there and back|whole journey|round trip/i.test(t)) return 'The two legs cover equal DISTANCE, so the speeds do not average: use total distance / total time, which for two equal legs simplifies to 2ab/(a+b).';
     if (/equal (?:time|distance)|average speed/i.test(t)) return 'Equal TIME intervals: plain mean of the speeds. Equal DISTANCES: use total distance / total time, not the mean of the speeds.';
     return 'Average = total / count, so total = average x count.';
   };

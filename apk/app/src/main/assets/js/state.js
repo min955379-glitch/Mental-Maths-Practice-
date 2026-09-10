@@ -43,6 +43,17 @@
   // A snapshot is the current in-memory quiz state. The store keeps one
   // entry per session.id and updates the existing one on every progress
   // tick (so we never overwrite one unfinished quiz with another).
+  // Monotonic sequence number: two snapshots written in the same millisecond
+  // used to keep insertion order, so "newest first" was undefined. Sorting now
+  // falls back to this counter.
+  let seqCounter = 0;
+  function newestFirst(a, b) {
+    const ta = a.lastSavedAt || a.startedAt || '';
+    const tb = b.lastSavedAt || b.startedAt || '';
+    if (ta !== tb) return tb.localeCompare(ta);
+    return (b.savedSeq || 0) - (a.savedSeq || 0);
+  }
+
   function saveUnfinishedSnapshot(snapshot) {
     if (!snapshot || !snapshot.id) return;
     // Defensive clone so callers can mutate freely.
@@ -52,6 +63,7 @@
     const arr = State.data.unfinished;
     const idx = arr.findIndex(x => x.id === snap.id);
     snap.lastSavedAt = new Date().toISOString();
+    snap.savedSeq = ++seqCounter;
     if (idx >= 0) {
       arr[idx] = snap;
     } else {
@@ -59,7 +71,7 @@
     }
     // Cap the unfinished list at 10 most-recent entries.
     if (arr.length > 10) {
-      arr.sort((a,b) => (b.lastSavedAt || '').localeCompare(a.lastSavedAt || ''));
+      arr.sort(newestFirst);
       arr.length = 10;
     }
     State.save();
@@ -69,17 +81,22 @@
     return State.data.unfinished
       .filter(x => !x.completedAt)
       .slice()
-      .sort((a,b) => (b.lastSavedAt || b.startedAt || '').localeCompare(a.lastSavedAt || a.startedAt || ''));
+      .sort(newestFirst);
   }
   function removeUnfinished(id) {
     const before = State.data.unfinished.length;
     State.data.unfinished = State.data.unfinished.filter(x => x.id !== id);
     if (State.data.unfinished.length !== before) State.save();
   }
+  function deleteSession(id) {
+    const before = State.data.sessions.length;
+    State.data.sessions = State.data.sessions.filter(x => x.id !== id);
+    if (State.data.sessions.length !== before) State.save();
+  }
   function clearUnfinished() {
     State.data.unfinished = [];
     State.save();
   }
   // -----------------------------------------------------------------------
-  window.StateStore = { State, getSettings, setSettings, setUser, getUser, clearUser, recordSession, getSessions, recordAttempt, getAttempts, resetAll, uid, saveUnfinishedSnapshot, getUnfinished, removeUnfinished, clearUnfinished };
+  window.StateStore = { State, getSettings, setSettings, setUser, getUser, clearUser, recordSession, getSessions, recordAttempt, getAttempts, resetAll, deleteSession, uid, saveUnfinishedSnapshot, getUnfinished, removeUnfinished, clearUnfinished };
 })();

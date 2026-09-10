@@ -62,8 +62,10 @@ if [ -f "release.keystore" ]; then
   fi
   if command -v apksigner >/dev/null 2>&1; then
     echo "Signing APK..."
-    apksigner sign --ks release.keystore --ks-pass pass:mentalmath --key-pass pass:mentalmath \
-      --ks-key-alias iscspmatharena \
+    export KS_PASS="${KS_PASS:-mentalmath}"
+    export KS_ALIAS="${KS_ALIAS:-iscspmatharena}"
+    apksigner sign --ks release.keystore --ks-pass env:KS_PASS --key-pass env:KS_PASS \
+      --ks-key-alias "$KS_ALIAS" \
       --out "$APK_PATH.signed.apk" "$APK_PATH"
     cp "$APK_PATH.signed.apk" ISCSP-Mental-Math-Arena.apk
     echo "Signed APK: ISCSP-Mental-Math-Arena.apk ($(du -sh ISCSP-Mental-Math-Arena.apk | cut -f1))"

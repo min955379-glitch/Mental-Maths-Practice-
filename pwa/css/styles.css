@@ -282,7 +282,7 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--c-indigo
 .continue-others summary { cursor: pointer; font-weight: 600; color: var(--c-text-muted); padding: 6px 0; list-style: none; user-select: none; }
 .continue-others summary::-webkit-details-marker { display: none; }
 .continue-others summary::before { content: '\25B8'; display: inline-block; margin-right: 6px; transition: transform 150ms ease; }
-.continue-others[open] summary::before, .continue-others details[open] summary::before { transform: rotate(90deg); }
+.continue-others details[open] > summary::before, .continue-others > details[open] summary::before { transform: rotate(90deg); }
 .continue-others-body { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; }
 .quiz-feedback { margin-top: 14px; padding: 22px; border-color: var(--c-border); }
 .quiz-feedback.correct { border-color: var(--c-success-border); }

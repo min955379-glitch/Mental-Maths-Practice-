@@ -1,5 +1,65 @@
 # Release Notes
 
+## v1.1.1 — Bug-review release (5 confirmed bugs fixed + hardening)
+
+**Release date:** 2026-09-10
+**File:** `apk/Mental-Maths-Practice.apk` (507 KB / 519,003 bytes, versionCode 3, versionName 1.1.1)
+**MD5:** `6605300584c4777f3305ce90bde6a0d9`
+**Signed with the original release key** (SHA-256 `2d7470c4a523…`), verified v1 + v2 + v3 →
+installs as an in-place update over v1.1.0 and keeps every stat, session and unfinished quiz.
+
+Triggered by an independent line-by-line review (`BUGS.md`). Every item is answered in
+[`BUGFIX-REPORT.md`](../BUGFIX-REPORT.md) at the repository root.
+
+### Bugs fixed
+
+- **Blank answers were graded as wrong.** `submit(null)`, `submit(undefined)` and
+  `submit("")` used to be recorded as incorrect attempts, silently dragging down
+  accuracy, streaks and history. They are now refused before anything is persisted.
+- **`finish()` crashed without an active session** (`TypeError: Cannot set properties
+  of null`). It now returns `null`; `pause()` / `quit()` are covered by tests too.
+- **The countdown wrote `localStorage` every second** (~600 synchronous writes in a
+  10-minute quiz). Persistence is throttled to one write per 5 ticks; leaving,
+  submitting and advancing still flush the exact remaining time, so resume fidelity
+  is unchanged.
+- **Streaks and the daily goal used the UTC date.** In Asia/Karachi (UTC+5) the day
+  rolled over at 19:00 local time. Both now use a local calendar day.
+- **"Expert" difficulty never produced Expert questions.** Added successive-percentage
+  change, reverse percentage and average-speed-over-equal-distances (harmonic mean),
+  each with a method-teaching hint, plus a smarter seed fallback (Expert → Hard →
+  Medium).
+
+### Hardening
+
+- Content-Security-Policy added (no remote resource is loaded anywhere in the app).
+- `getAccountDetails()` no longer returns the password salt or hash.
+- Keystore password is read from `KS_PASS` / `KS_ALIAS` instead of being hardcoded in
+  `build-offline.sh`, `build.sh` and `app/build.gradle`.
+- WebView: cross-file scripting explicitly disabled
+  (`setAllowFileAccessFromFileURLs(false)`, `setAllowUniversalAccessFromFileURLs(false)`).
+- `crypto.subtle` unavailable (plain-HTTP hosting) now returns a clear message instead
+  of throwing; unknown `?cat=` routes fall back to mixed practice.
+- `genRatio()` recursion bounded; `StateStore.deleteSession()` added;
+  `parseFraction` accepts a negative denominator; service worker cache → `iscsp-mm-v7`.
+
+### Polish
+
+- Toast timers no longer race (a newer toast is no longer hidden early).
+- Snapshots saved in the same millisecond still sort newest-first.
+- Categories with no seed questions say "Generator only — unlimited questions".
+- Disclosure arrow now rotates; theme icon stroke weights match; auth tabs focus the
+  first field; `<details>` keeps `aria-expanded` in sync.
+
+### Verification
+
+- `node tests/pwa.test.mjs` → **14/14**
+- `node tests/regressions.test.mjs` → **15/15** (new suite; each test fails against the pre-fix source)
+- Hint sweep over 1,555 questions → 0 missing hints, 0 answer-revealing hints
+- Both suites re-run against the `assets/` extracted from the finished APK → **29/29**,
+  and those assets are byte-identical to `pwa/`.
+
+---
+
 ## v1.1.0 — Hint button fixed + Continue Quiz (resumable sessions)
 
 **Release date:** 2026-09-10

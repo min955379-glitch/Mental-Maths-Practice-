@@ -22,11 +22,26 @@
     const seedPool = (window.QUESTIONS || []).slice();
     const filteredSeed = seedPool.filter(q => { if(category && q.category !== category) return false; if(difficulty && difficulty !== 'Mixed' && q.difficulty !== difficulty) return false; return true; });
     const pool = [];
-    const useSeed = filteredSeed.length ? filteredSeed.slice() : seedPool.slice();
+    // Nothing seeded at exactly this difficulty: step down to the hardest tier
+    // that exists instead of silently falling back to an arbitrary mix.
+    let useSeed;
+    if (filteredSeed.length) {
+      useSeed = filteredSeed.slice();
+    } else {
+      const tiers = { Expert: ['Expert', 'Hard'], Hard: ['Hard', 'Medium'] }[difficulty] || null;
+      let found = null;
+      if (tiers) {
+        for (const tier of tiers) {
+          const f = seedPool.filter(q => (!category || q.category === category) && q.difficulty === tier);
+          if (f.length) { found = f.slice(); break; }
+        }
+      }
+      useSeed = found || seedPool.slice();
+    }
     shuffle(useSeed);
     const seedTake = Math.min(useSeed.length, Math.ceil(count * 0.7));
     for (let i = 0; i < seedTake && pool.length < count; i++) pool.push(Object.assign({}, useSeed[i], {_origin:'seed'}));
-    while (pool.length < count) { const gen = window.Generator.generateOne(category); if(gen) pool.push(Object.assign({}, gen, {_origin:'generated'})); else break; }
+    while (pool.length < count) { const gen = window.Generator.generateOne(category, difficulty); if(gen) pool.push(Object.assign({}, gen, {_origin:'generated'})); else break; }
     return pool.slice(0, count);
   }
   function mistakePool(count) {
@@ -56,6 +71,11 @@
     return session;
   }
   function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  // How many countdown ticks between persistence writes (see _startTimer).
+  const SAVE_EVERY_TICKS = 5;
+  // Public flag used by quit() so the UI can tell "user left" from "finished".
+  const QUIT_FLAG = '_quit';
 
   const Quiz = {
     current: null,
@@ -110,6 +130,7 @@
     },
     _startTimer() {
       this.stopTimer();
+      this._ticksSinceSave = 0;
       if (this.remainingSec) {
         this.timerHandle = setInterval(() => {
           this.remainingSec--;
@@ -118,8 +139,15 @@
             this.stopTimer();
             if (this.onTimeout) this.onTimeout();
           } else {
-            // Persist timer state on every tick so a resume picks up correctly.
-            this._saveSnapshot();
+            // Persist the countdown at most once every SAVE_EVERY_TICKS.
+            // A 10-minute quiz now writes ~120 times instead of 600, and
+            // pause() / quit() / submit() / next() always flush the exact
+            // remaining time before it can be needed.
+            this._ticksSinceSave++;
+            if (this._ticksSinceSave >= SAVE_EVERY_TICKS) {
+              this._ticksSinceSave = 0;
+              this._saveSnapshot();
+            }
           }
         }, 1000);
       }
@@ -136,6 +164,10 @@
     markHintUsed() { if(this.progress && this.progress.entries[this.index]) { this.progress.entries[this.index].hintsUsed = (this.progress.entries[this.index].hintsUsed || 0) + 1; this._saveSnapshot(); } },
     submit(answer) {
       const q = this.currentQuestion(); if(!q) return null;
+      // Never record a blank answer: null / undefined / "" / "   " used to be
+      // graded as a wrong attempt, which corrupted accuracy, streaks and the
+      // attempt history. Callers get null back and nothing is persisted.
+      if (answer == null || String(answer).trim() === '') return null;
       const now = performance.now();
       const responseTimeMs = Math.max(0, Math.round(now - this.startedAt));
       const isCorrect = window.Normalize.compareAnswers(answer, q);
@@ -169,6 +201,7 @@
       return true;
     },
     finish() {
+      if (!this.current) return null;   // defensive: nothing to finish
       this.stopTimer();
       this.current.completedAt = new Date().toISOString();
       StateStore.recordSession(this.current);
@@ -201,7 +234,7 @@
       this._saveSnapshot();
       this.stopTimer();
       const session = this.current;
-      session._quit = true;
+      session[QUIT_FLAG] = true;
       this.current = null;
       this.progress = null;
       this._detachCallbacks();
@@ -214,6 +247,7 @@
     // may fire into whatever screen is rendered next.
     pause() {
       if (!this.current) return null;
+      this._ticksSinceSave = 0;
       const snap = this._saveSnapshot();
       this.stopTimer();
       this.current = null;
@@ -230,5 +264,7 @@
       this.onFinish = null;
     }
   };
-  window.QuizEngine = { Quiz, buildSession, findQuestion, snapshotToSession };
+  function isQuitSession(session) { return !!(session && session[QUIT_FLAG]); }
+
+  window.QuizEngine = { Quiz, buildSession, findQuestion, snapshotToSession, isQuitSession, QUIT_FLAG };
 })();

@@ -2,9 +2,9 @@
 
 **App:** Mental Maths Practice (ISCSP exam preparation)
 **Repo:** [min955379-glitch/Mental-Maths-Practice-](https://github.com/min955379-glitch/Mental-Maths-Practice-)
-**Latest release:** **v1.1.0** (2026-09-10) — `apk/Mental-Maths-Practice.apk`, 515 KB, signed v1+v2+v3
-**Package:** `com.iscsp.mentalmatharena` (versionCode 2) · **PWA cache:** `iscsp-mm-v6`
-**Last reviewed:** release commit `48a975d` + docs update
+**Latest release:** **v1.1.1** (2026-09-10) — `apk/Mental-Maths-Practice.apk`, 507 KB, signed v1+v2+v3
+**Package:** `com.iscsp.mentalmatharena` (versionCode 3) · **PWA cache:** `iscsp-mm-v7`
+**Last reviewed:** v1.1.1 bug-review release — every item of `BUGS.md` answered in `BUGFIX-REPORT.md`
 
 ---
 
@@ -13,10 +13,10 @@
 | Path | Status | What it is |
 |---|---|---|
 | `pwa/` | **ACTIVE / shipping** | The app itself: self-contained progressive web app — no build step, no backend, works offline, installable, and bundled into the Android APK. **All new features land here.** |
-| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.1.0, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
+| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.1.1, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
 | `apk/build.sh` | ACTIVE | Gradle rebuild: syncs `pwa/` → assets, `gradle assembleRelease`, signs with `release.keystore`. |
 | `apk/build-offline.sh` | ACTIVE | Gradle-free rebuild straight from the SDK tools (aapt2 → javac → d8 → zipalign → apksigner). This is how v1.1.0 was produced. |
-| `tests/` | ACTIVE | JSDOM end-to-end suite driving the real app (14 scenarios + a 1,550-question hint sweep). |
+| `tests/` | ACTIVE | JSDOM suites driving the real app: `pwa.test.mjs` (14 end-to-end scenarios) + `regressions.test.mjs` (15 regression scenarios) + a 1,555-question hint sweep. |
 | `backend/` | PRESERVED (legacy) | Node + Express + Prisma (SQLite) API from the earlier full-stack iteration — the starting point if cloud sync ever lands. |
 | `frontend/` | PRESERVED (legacy) | React 18 + Vite + TypeScript SPA from the earlier iteration; needs the backend running, not used by the shipping app. |
 
@@ -84,16 +84,46 @@
 - [x] Tests committed to the repo (`tests/`) and runnable with `cd tests && npm install && npm test`
 - [x] `ROADMAP.md` + `README.md` + `apk/RELEASE-NOTES.md` updated for v1.1.0
 
+### 1.8 v1.1.1 — Bug-review release (2026-09-10)
+
+Triggered by `BUGS.md`, an independent line-by-line review. Full item-by-item
+answer: [`BUGFIX-REPORT.md`](BUGFIX-REPORT.md).
+
+**Confirmed bugs fixed**
+- [x] `submit(null / undefined / "")` no longer records a blank answer as a wrong attempt (**BUG-A**)
+- [x] `finish()` no longer crashes when no session is active (**BUG-B**); `pause()` / `quit()` null-safety pinned by tests
+- [x] Countdown persistence throttled to 1 write per 5 ticks — 600 → ~120 writes per 10-minute quiz (**BUG-D**)
+- [x] `dailyStreak()` / `questionsToday()` use the **local** calendar day, not UTC (**BUG-E**)
+- [x] Expert difficulty now generates Expert questions (successive %, reverse %, harmonic average speed)
+
+**Hardening**
+- [x] Content-Security-Policy meta tag; no remote resource is loaded anywhere
+- [x] `getAccountDetails()` no longer returns the password salt or hash
+- [x] Keystore credentials from `KS_PASS` / `KS_ALIAS` (build scripts + `build.gradle`)
+- [x] WebView cross-file scripting explicitly disabled
+- [x] `crypto.subtle` missing → clear message instead of an unhandled rejection
+- [x] Unknown `?cat=` route falls back to mixed practice
+- [x] `genRatio()` recursion bounded; `StateStore.deleteSession()` added; negative fraction denominators accepted
+- [x] Service worker cache `iscsp-mm-v6` → `v7`; `build-offline.sh` reads the version from `build.gradle`; asset sync excludes `node_modules` / junk
+
+**Polish**
+- [x] Toast timers no longer race · same-millisecond snapshots sort deterministically · "Generator only" category label · rotating disclosure arrow · matching icon stroke weights · auth tab focus · `aria-expanded` on `<details>`
+
+**Verification** — 14/14 e2e + 15/15 regression; both suites also run against the
+`assets/` extracted from the finished APK (29/29), and those assets are
+byte-identical to `pwa/`.
+
 ---
 
 ## 2. In progress / next up
 
 | # | Item | Why it matters | Where |
 |---|---|---|---|
+| 0 | **Password hashing** | Local accounts use salted SHA-256, which is brute-force friendly. With no server the risk is limited (a lost device), but PBKDF2/scrypt via WebCrypto is the right primitive when sync lands | `pwa/js/auth.js` |
 | 1 | **Stale naming sweep** | "ISCSP Mental Math AI Arena" still lives in `frontend/index.html`, backend log strings, the Gradle project name and the old `ISCSP-Mental-Math-Arena.apk` | `frontend/`, `backend/`, `apk/` |
 | 2 | **GitHub Pages deploy** | The Pages workflow was added in `de071b7`, then removed in `0c3e1bf`. Without a hosted URL there is no "Add to Home Screen" install path for people who don't want the APK | `.github/` |
 | 3 | **CI** | Run the JSDOM suite and a typecheck/lint on every push; build the APK on tags | `.github/workflows/` |
-| 4 | **Keep the two build paths in step** | `build.sh` (Gradle) and `build-offline.sh` (SDK tools) must always produce the same version/code — currently manual | `apk/` |
+| 4 | **Keep the two build paths in step** | `build-offline.sh` now reads `versionCode` / `versionName` from `app/build.gradle`, so there is one source of truth; `build.sh` (Gradle) still needs the same treatment plus a CI check that both agree | `apk/` |
 
 ---
 
@@ -129,6 +159,7 @@
 
 | Version | Date | Highlights | File |
 |---|---|---|---|
+| **v1.1.1** | 2026-09-10 | Bug-review release: blank answers no longer graded wrong, null-safe `finish()`, throttled countdown persistence, local-time streaks, Expert question generation, CSP + credential/keystore hardening, 15 new regression tests | `apk/Mental-Maths-Practice.apk` |
 | **v1.1.0** | 2026-09-10 | Hint button fixed (question-specific hints, answer-safety guard); Continue Quiz with full save/resume; History and state bugs fixed; APK rebuilt at 515 KB with the Gradle-free pipeline | `apk/Mental-Maths-Practice.apk` |
 | v1.0.0 | 2026-09-09 | First WebView-wrapper APK bundling the PWA; renamed to "Mental Maths Practice"; custom launcher icon; math typography cleanup | `apk/ISCSP-Mental-Math-Arena.apk` (superseded) |
 | — | 2026-09-09 | Earlier TWA build pointed at `raw.githubusercontent.com`, which does not serve HTML → app opened on a 404. Replaced by the WebView wrapper. | — |
@@ -143,6 +174,7 @@
 | Timed quiz kept ticking after navigating away with Back | Countdown fired into a screen that was no longer the quiz | **Fixed** — router pauses and saves the in-flight session |
 | A resumed session was deleted before it was re-saved | Leaving straight after a resume could lose the session | **Fixed** — snapshot refreshed on resume, cleared only on completion or discard |
 | History screen never listed sessions | Looked like progress was lost | **Fixed** — rows are appended to the list |
+| Password hashing is salted SHA-256, not a slow KDF | Local-only accounts; brute-force friendly if the device is lost | **Accepted for now** — tracked as §2.0 |
 | No GitHub Pages workflow | No hosted URL for install/share | **Open** — see §2.2 |
 | Legacy "AI Arena" naming in `frontend/`, `backend/`, Gradle project | Cosmetic inconsistency | **Open** — see §2.1 |
 
@@ -151,11 +183,16 @@
 ## 6. How to verify a change
 
 ```bash
-# 1. Run the end-to-end suite against the PWA
-cd tests && npm install && npm test
+# 0. jsdom lives outside the repo; recreate the symlink once per fresh clone
+ln -sfn /home/user/tests/node_modules tests/node_modules
 
-# 2. Point the same suite at any built bundle (e.g. assets extracted from an APK)
+# 1. Run both suites against the PWA
+node tests/pwa.test.mjs            # 14 end-to-end scenarios
+node tests/regressions.test.mjs    # 15 regression scenarios (BUGS.md fixes)
+
+# 2. Point the same suites at any built bundle (e.g. assets extracted from an APK)
 APP_DIR=/path/to/extracted/assets node tests/pwa.test.mjs
+APP_DIR=/path/to/extracted/assets node tests/regressions.test.mjs
 
 # 3. Rebuild and re-sign the APK
 cd apk && bash build-offline.sh     # or: bash build.sh  (Gradle)
@@ -165,7 +202,13 @@ aapt dump badging Mental-Maths-Practice.apk
 apksigner verify --verbose Mental-Maths-Practice.apk
 ```
 
-The suite covers: hint generation, the hint button, auto-save on Back, the
-Continue card, surviving a refresh, resume fidelity, timer preservation,
-multiple unfinished quizzes, discard, quit confirmation, completion/cleanup and
-regressions on the existing screens.
+The end-to-end suite covers: hint generation, the hint button, auto-save on
+Back, the Continue card, surviving a refresh, resume fidelity, timer
+preservation, multiple unfinished quizzes, discard, quit confirmation,
+completion/cleanup and regressions on the existing screens.
+
+The regression suite covers every bug fixed in v1.1.1 (blank-answer rejection,
+null-safe `finish()` / `pause()` / `quit()`, throttled countdown persistence,
+local-time streaks, deterministic snapshot ordering, Expert generation, CSP,
+no salt/hash exposure, the attempts cap, route validation and more). Each of
+those tests fails against the pre-fix source, so they cannot silently rot.

@@ -10,16 +10,16 @@ android {
         applicationId "com.iscsp.mentalmatharena"
         minSdk 21
         targetSdk 34
-        versionCode 2
-        versionName "1.1.0"
+        versionCode 3
+        versionName "1.1.1"
     }
 
     signingConfigs {
         release {
             storeFile file("../release.keystore")
-            storePassword "mentalmath"
-            keyAlias "iscspmatharena"
-            keyPassword "mentalmath"
+            storePassword (System.getenv("KS_PASS") ?: "mentalmath")
+            keyAlias (System.getenv("KS_ALIAS") ?: "iscspmatharena")
+            keyPassword (System.getenv("KS_PASS") ?: "mentalmath")
         }
     }
 

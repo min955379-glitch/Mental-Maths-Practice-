@@ -34,6 +34,7 @@ public class MainActivity extends Activity {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        // Deprecated but still needed for WebSQL/DOM storage on old API levels.
         settings.setDatabaseEnabled(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         settings.setUseWideViewPort(true);
@@ -41,8 +42,13 @@ public class MainActivity extends Activity {
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
+        // Required so the page can load file:///android_asset/index.html.
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
+        // Explicitly deny cross-file scripting: file:// pages must NOT be able to
+        // read other local files or reach arbitrary origins through XHR/fetch.
+        settings.setAllowFileAccessFromFileURLs(false);
+        settings.setAllowUniversalAccessFromFileURLs(false);
         settings.setMediaPlaybackRequiresUserGesture(false);
 
         // Improve performance

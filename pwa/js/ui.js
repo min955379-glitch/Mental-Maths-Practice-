@@ -15,10 +15,17 @@
     return e;
   }
   function clear(node) { while(node.firstChild) node.removeChild(node.firstChild); }
+  let toastTimer = null;
   function showToast(message, type) {
     const t = document.getElementById('toast'); if(!t) return;
+    // Cancel any pending hide: previously a second toast shown within 2.4s was
+    // wiped out by the first toast's timer.
+    if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
     t.textContent = message; t.className = 'toast show' + (type ? ' ' + type : '');
-    setTimeout(() => { t.className = 'toast' + (type ? ' ' + type : ''); }, 2400);
+    toastTimer = setTimeout(() => {
+      t.className = 'toast' + (type ? ' ' + type : '');
+      toastTimer = null;
+    }, 2400);
   }
   function setActiveNav(route) {
     document.querySelectorAll('.nav-item').forEach(n => { n.classList.toggle('active', n.dataset.route === route); });
@@ -113,6 +120,8 @@
       const body = el('div', {class: 'continue-others-body'});
       others.forEach(s => { const c = buildCard(s, false); if (c) body.appendChild(c); });
       summary.appendChild(body);
+      sum.setAttribute('aria-expanded', 'false');
+      summary.addEventListener('toggle', () => sum.setAttribute('aria-expanded', summary.open ? 'true' : 'false'));
       wrap.appendChild(summary);
       host.appendChild(wrap);
     }
@@ -139,7 +148,8 @@
     if (recent.length === 0) { ra.innerHTML = '<p class="muted">No sessions yet. Start a practice to see your activity here.</p>'; }
     else { clear(ra); recent.forEach(s => { const score = Math.round((s.correct/Math.max(1,s.count))*100); const item = el('div', {class:'history-item'}); item.appendChild(el('div', {class:'hi-mode'}, modeLabel(s))); item.appendChild(el('div', {class:'hi-score'}, s.correct+'/'+s.count+' - '+score+'%')); item.appendChild(el('div', {class:'hi-time'}, new Date(s.startedAt).toLocaleString())); ra.appendChild(item); }); }
   }
-  function renderCategories(main) { const tpl = document.getElementById('tpl-categories'); main.appendChild(tpl.content.cloneNode(true)); const grid = document.getElementById('catGrid'); const counts = {}; (window.QUESTIONS || []).forEach(q => { counts[q.category] = (counts[q.category] || 0) + 1; }); window.CATEGORIES.forEach(cat => { const card = el('button', {class:'cat-card', type:'button', onclick:() => { location.hash = '#/category?cat=' + encodeURIComponent(cat); }}); card.appendChild(el('h3', null, cat)); card.appendChild(el('div', {class:'cat-meta'}, (counts[cat] || 0) + ' seeded questions')); grid.appendChild(card); }); }
+  function renderCategories(main) { const tpl = document.getElementById('tpl-categories'); main.appendChild(tpl.content.cloneNode(true)); const grid = document.getElementById('catGrid'); const counts = {}; (window.QUESTIONS || []).forEach(q => { counts[q.category] = (counts[q.category] || 0) + 1; }); window.CATEGORIES.forEach(cat => { const card = el('button', {class:'cat-card', type:'button', onclick:() => { location.hash = '#/category?cat=' + encodeURIComponent(cat); }}); card.appendChild(el('h3', null, cat));       const seeded = counts[cat] || 0;
+      card.appendChild(el('div', {class:'cat-meta'}, seeded ? (seeded + ' seeded questions') : 'Generator only - unlimited questions')); grid.appendChild(card); }); }
   function renderSettings(main) {
     const tpl = document.getElementById('tpl-settings'); main.appendChild(tpl.content.cloneNode(true));
     const s = StateStore.getSettings();
@@ -158,7 +168,7 @@
     list.appendChild(item);
   }); }
   function deleteSession(id) {
-    StateStore.State.data.sessions = StateStore.State.data.sessions.filter(x => x.id !== id);
+    StateStore.deleteSession(id);
     StateStore.save();
   }
   function renderPatterns(main) {
@@ -171,7 +181,10 @@
   function renderAuth(main) {
     const tpl = document.getElementById('tpl-auth'); main.appendChild(tpl.content.cloneNode(true));
     const loginForm = document.getElementById('loginForm'); const registerForm = document.getElementById('registerForm');
-    document.querySelectorAll('.auth-tab').forEach(btn => { btn.addEventListener('click', () => { const tab = btn.dataset.tab; document.querySelectorAll('.auth-tab').forEach(b => { b.classList.toggle('active', b === btn); b.setAttribute('aria-selected', b === btn); }); loginForm.hidden = (tab !== 'login'); registerForm.hidden = (tab !== 'register'); }); });
+    document.querySelectorAll('.auth-tab').forEach(btn => { btn.addEventListener('click', () => { const tab = btn.dataset.tab; document.querySelectorAll('.auth-tab').forEach(b => { b.classList.toggle('active', b === btn); b.setAttribute('aria-selected', b === btn); }); loginForm.hidden = (tab !== 'login'); registerForm.hidden = (tab !== 'register');
+        const focusTarget = (tab === 'login' ? loginForm : registerForm).querySelector('input');
+        if (focusTarget) { try { focusTarget.focus(); } catch (e) { /* focus is best-effort */ } }
+      }); });
     const loginMsg = document.getElementById('loginMsg'); const registerMsg = document.getElementById('registerMsg');
     loginForm.addEventListener('submit', async (e) => { e.preventDefault(); loginMsg.textContent = ''; const fd = new FormData(loginForm); const res = await window.Auth.login({ email:fd.get('email'), password:fd.get('password') }); if(res.ok) { showToast('Welcome back', 'success'); location.hash = '#/dashboard'; route(); } else { loginMsg.textContent = res.msg; } });
     registerForm.addEventListener('submit', async (e) => { e.preventDefault(); registerMsg.textContent = ''; const fd = new FormData(registerForm); if(fd.get('password') !== fd.get('confirm')) { registerMsg.textContent = 'Passwords do not match.'; return; } const res = await window.Auth.register({ name:fd.get('name'), email:fd.get('email'), password:fd.get('password') }); if(res.ok) { showToast('Account created', 'success'); location.hash = '#/dashboard'; route(); } else { registerMsg.textContent = res.msg; } });
@@ -350,9 +363,9 @@
     document.getElementById('fbNext').onclick = () => { window.QuizEngine.Quiz.next(); };
   }
   function renderResult(main, session) {
-    // A "_quit" session means the user explicitly left the quiz. The
-    // unfinished snapshot is already saved; just route back to the dashboard.
-    if (session && session._quit) {
+    // A quit session means the user explicitly left the quiz. The unfinished
+    // snapshot is already saved; just route back to the dashboard.
+    if (window.QuizEngine.isQuitSession(session)) {
       location.hash = '#/dashboard';
       route();
       return;
@@ -375,7 +388,7 @@
     if (wrongAttempts.length === 0) { review.appendChild(el('p', {class:'muted'}, 'No incorrect answers in this session - nice work.')); }
     else { wrongAttempts.forEach(att => { const q = (window.QUESTIONS || []).find(x => x.id === att.questionId); const item = el('div', {class:'review-item'}); item.appendChild(el('p', {class:'ri-q'}, att.questionText)); const meta = el('div', {class:'ri-meta'}); meta.appendChild(el('span', {class:'ri-pill bad'}, 'Incorrect')); meta.appendChild(el('span', null, att.category)); meta.appendChild(el('span', null, att.difficulty)); item.appendChild(meta); const detail = el('div', {class:'ri-detail'}); if(q) { detail.appendChild(el('p', null, 'Your answer: ' + att.userAnswer + '   |   Correct: ' + (q.correctAnswer + (q.unit ? ' ' + q.unit : '')))); detail.appendChild(el('p', null, 'Fast trick: ' + q.shortcut)); detail.appendChild(el('p', null, 'Mental pattern: ' + q.mentalPattern)); } else { detail.appendChild(el('p', null, 'Your answer: ' + att.userAnswer + '   |   Correct: ' + att.correctAnswer)); } item.appendChild(detail); review.appendChild(item); }); }
   }
-  function applyTheme() { const s = StateStore.getSettings(); const wantsDark = s.theme === 'dark' || (s.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.dataset.theme = wantsDark ? 'dark' : 'light'; const ico = document.getElementById('themeIcon'); if(ico) { ico.innerHTML = wantsDark ? '<circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' : '<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'; } }
+  function applyTheme() { const s = StateStore.getSettings(); const wantsDark = s.theme === 'dark' || (s.theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.dataset.theme = wantsDark ? 'dark' : 'light'; const ico = document.getElementById('themeIcon'); if(ico) { ico.innerHTML = wantsDark ? '<circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' : '<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'; } }
   function applyMotionPref() { const s = StateStore.getSettings(); document.documentElement.dataset.reducedMotion = s.reducedMotion ? 'true' : 'false'; }
   function parseRoute() {
     const h = location.hash || '#/dashboard';
@@ -411,7 +424,13 @@
     else if (path === '/practice') startQuiz(main, 'quick', { count:10 });
     else if (path === '/timed') startQuiz(main, 'timed', { count:20, minutes:10 });
     else if (path === '/fulltest') startQuiz(main, 'fulltest');
-    else if (path === '/category') startQuiz(main, 'category', { category:params.cat || null });
+    else if (path === '/category') {
+      // Only accept a real category: a hand-crafted ?cat= must not end up
+      // stored in the session record.
+      const known = (window.CATEGORIES || []).indexOf(params.cat) !== -1 ? params.cat : null;
+      if (params.cat && !known) { showToast('Unknown category. Starting mixed practice.', 'error'); }
+      startQuiz(main, 'category', { category: known });
+    }
     else if (path === '/weak') startQuiz(main, 'weak');
     else if (path === '/mistakes') startQuiz(main, 'mistakes');
     else if (path === '/resume') {

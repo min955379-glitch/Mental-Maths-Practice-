@@ -51,8 +51,14 @@
     const k = pick([2,3,4,5]); const son = pick([6,7,8,9,10,12]); const total = son*(k+1);
     return { question:'A father is '+k+' times older than his son. The sum of their ages is '+total+' years. What is the son\'s age?', correctAnswer:fmt(son), acceptedAnswers:[son+' years'], unit:'years', category:'Age Problems', difficulty: k===2?'Easy':'Medium', shortcut:k+' + 1 = '+(k+1)+' parts. '+total+' / '+(k+1)+' = '+son+'.', explanation:'Let son = x. Father = '+k+'x. x + '+k+'x = '+total+' -> '+(k+1)+'x = '+total+' -> x = '+son+'.', mentalPattern:"Total parts method — split the whole into (k + 1) parts.", commonMistake:"Dividing the total by k instead of k+1.", sourceType:'generated' };
   }
-  function genRatio() {
-    const total = pick([24,32,36,40,48,56,64,72,80,96]); const a = pick([2,3,4,5]); let b = pick([1,2,3,4,5]); while(b===a) b = pick([1,2,3,4,5]); const sumParts=a+b; const each=total/sumParts; if(!Number.isInteger(each)) return genRatio();
+  function genRatio(depth) {
+    // depth guards against unbounded recursion if the value sets ever change.
+    if (depth === undefined) depth = 0;
+    const total = pick([24,32,36,40,48,56,64,72,80,96]); const a = pick([2,3,4,5]); let b = pick([1,2,3,4,5]); while(b===a) b = pick([1,2,3,4,5]); const sumParts=a+b; const each=total/sumParts;
+    if(!Number.isInteger(each)) {
+      if (depth >= 8) { const e2 = Math.round(each*10)/10; return null; }
+      return genRatio(depth + 1);
+    }
     return { question:'In a group of '+total+' people, the ratio of boys to girls is '+a+':'+b+'. How many girls are there?', correctAnswer:fmt(b*each), acceptedAnswers:[b*each+' girls'], unit:'', category:'Ratios Proportions', difficulty:'Medium', shortcut:'Total parts = '+sumParts+'. Each part = '+total+'/'+sumParts+' = '+each+'. Girls = '+b+' × '+each+' = '+(b*each)+'.', explanation:'Sum of ratio parts = '+sumParts+'. Each = '+total+'/'+sumParts+' = '+each+'. Girls = '+b+' × '+each+' = '+(b*each)+'.', mentalPattern:"Total parts method: divide whole by sum, multiply by relevant part.", commonMistake:"Multiplying by the wrong part.", sourceType:'generated' };
   }
   function genWorkTime() {
@@ -68,21 +74,52 @@
     const timeStr = t===0.5?'30 minutes':(t===1?'1 hour':(t===1.5?'1 hour 30 minutes':'2 hours'));
     return { question:'Two cyclists start from the same point and move in opposite directions at '+a+' km/h and '+b+' km/h. How far apart are they after '+timeStr+'?', correctAnswer:fmt(d), acceptedAnswers:[fmt(d)+' km'], unit:'km', category:'Relative Speed', difficulty: (t===0.5||t===1.5)?'Medium':'Easy', shortcut:'Opposite directions -> add speeds = '+(a+b)+' km/h. '+(t===0.5?'Half hour':(t===1.5?'1.5 h':(t+' h')))+' -> '+fmt(d)+' km.', explanation:'Opposite-direction relative speed = '+(a+b)+' km/h. Distance = '+(a+b)+' × '+t+' = '+fmt(d)+' km.', mentalPattern:"Opposite directions -> add speeds.", commonMistake:"Subtracting the speeds instead of adding.", sourceType:'generated' };
   }
+  // "Expert" tier: the settings screen offers Expert, but nothing generated it.
+  function genSuccessivePercent() {
+    const p = pick([10,20,25,40,50]);
+    const up = Math.random() < 0.5;
+    const net = parseFloat(((p*p)/100).toFixed(3));          // always a net LOSS
+    const after = 100 * (1 + (up ? p : -p)/100);
+    const back = after * (1 + (up ? -p : p)/100);
+    const dir = up ? 'increased' : 'decreased';
+    const rev = up ? 'decreased' : 'increased';
+    return { question:'A price is '+dir+' by '+p+'% and then '+rev+' by '+p+'%. What is the net percentage decrease?', correctAnswer:fmt(net), acceptedAnswers:[fmt(net)+'%', '-'+fmt(net), net+'% loss'], unit:'%', category:'Percentages', difficulty:'Expert', shortcut:'Start from 100. After '+dir+' by '+p+'% -> '+fmt(after)+'; then '+rev+' by '+p+'% of '+fmt(after)+' -> '+fmt(back)+'. Net = '+fmt(100-back)+'% down. Shortcut: p\u00b2/100 = '+p+'\u00b2/100 = '+fmt(net)+'%.', explanation:'Successive equal percentage changes never cancel out. The net change is -(p\u00b2/100)% = -('+p+'\u00b2/100)% = a '+fmt(net)+'% decrease.', mentalPattern:'Successive percent change: up p% then down p% (or the reverse) always loses p\u00b2/100 percent.', commonMistake:'Assuming +'+p+'% and -'+p+'% cancel to 0%.' };
+  }
+  function genReversePercent() {
+    const p = pick([12.5,20,25,40,60,75,80]);
+    const base = pick([60,80,120,160,200,240,320,400,500]);
+    const part = parseFloat(((p/100)*base).toFixed(3));
+    return { question:p+'% of a number is '+fmt(part)+'. What is the number?', correctAnswer:fmt(base), acceptedAnswers:[fmt(base)+'', String(Math.round(base))], unit:'', category:'Percentages', difficulty:'Hard', shortcut:'Call the number x: '+p+'% x x = '+fmt(part)+', so x = '+fmt(part)+' \u00f7 '+(p/100)+' = '+fmt(part)+' \u00d7 '+(100/p)+' = '+fmt(base)+'.', explanation:'Reverse percentage: divide the given part by the percentage written as a decimal (or multiply by 100/'+p+').', mentalPattern:'Reverse percent: part \u00f7 (percent/100) = whole. Multiply by the reciprocal fraction.', commonMistake:'Multiplying by the percentage instead of dividing by it.' };
+  }
+  function genAverageSpeedRoundTrip() {
+    const pairs = [[40,60],[30,60],[20,30],[50,75],[60,90],[24,48],[36,45],[25,100],[15,45],[12,24]];
+    const pair = pick(pairs); const a = pair[0], b = pair[1];
+    const ans = parseFloat(((2*a*b)/(a+b)).toFixed(3));
+    return { question:'A car travels from city A to city B at '+a+' km/h and returns at '+b+' km/h. What is the average speed for the whole journey?', correctAnswer:fmt(ans), acceptedAnswers:[fmt(ans)+' km/h', fmt(ans)+'kmph'], unit:'km/h', category:'Averages', difficulty:'Expert', shortcut:'Equal distances, so use 2ab/(a+b) = 2 \u00d7 '+a+' \u00d7 '+b+' / ('+a+' + '+b+') = '+fmt(ans)+' km/h. Never the plain mean of the two speeds.', explanation:'Average speed = total distance / total time. With equal distances d each way the times are d/'+a+' and d/'+b+', which simplifies to the harmonic mean 2ab/(a+b) = '+fmt(ans)+' km/h.', mentalPattern:'Average speed over equal DISTANCES = harmonic mean 2ab/(a+b), not the arithmetic mean.', commonMistake:'Averaging the two speeds (('+a+'+'+b+')/2 = '+fmt((a+b)/2)+'), which overweights the slower leg.' };
+  }
   const GENERATORS = { 'Percentages': genPercentOf, 'Speed Distance Time': genSpeedDistanceTime, 'Fractions': genFractionOf, 'Ratios Proportions': genUnitPrice, 'Profit Loss': genProfitLoss, 'Pipes Tanks': genPipes, 'Unit Conversion': [genKmhToMs, genMsToKmh], 'Mental Multiplication': genMultiplyBy11, 'Decimals': genDecimalMultiply, 'Age Problems': genAgeProblem, 'Averages': genAverageOfSequence, 'Work Time': genWorkTime, 'Relative Speed': genOppositeDirection };
-  function generateOne(category) {
+  // Expert tier generators, used when the requested difficulty is Expert.
+  const EXPERT_GENERATORS = { 'Percentages': [genSuccessivePercent, genReversePercent], 'Averages': [genAverageSpeedRoundTrip] };
+
+  function generateOne(category, difficulty) {
     const cats = category ? [category] : Object.keys(GENERATORS);
     const usable = cats.filter(c => GENERATORS[c]);
     if (usable.length === 0) return null;
-    const cat = pick(usable); const fn = GENERATORS[cat];
+    const cat = pick(usable);
+    if (difficulty === 'Expert' && EXPERT_GENERATORS[cat]) {
+      const eq = pick(EXPERT_GENERATORS[cat])();
+      if (eq) { eq.id = 'g-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8); return eq; }
+    }
+    const fn = GENERATORS[cat];
     const q = typeof fn === 'function' ? fn() : pick(fn)();
     if (!q) return null;
     q.id = 'g-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     return q;
   }
-  function generateMany(count, category) {
+  function generateMany(count, category, difficulty) {
     const list = []; let safety = 0;
     while (list.length < count && safety < count*20) {
-      const q = generateOne(category); if (q) list.push(q); safety++;
+      const q = generateOne(category, difficulty); if (q) list.push(q); safety++;
     }
     return list;
   }

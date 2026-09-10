@@ -3,20 +3,25 @@
 A complete, polished, production-quality mental-math training platform for
 ISCSP exam preparation.
 
-> **Latest release — v1.1.0 (2026-09-10).** Signed Android APK:
-> [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 515 KB,
-> versionCode 2, signed with the release key (v1 + v2 + v3 verified). It
+> **Latest release — v1.1.1 (2026-09-10).** Signed Android APK:
+> [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 507 KB,
+> versionCode 3, signed with the release key (v1 + v2 + v3 verified). It
 > installs as an in-place update over earlier builds and keeps your progress.
-> This release fixes the dead **Hint button** and adds **Continue Quiz**
-> (save / resume unfinished sessions). Details: [`apk/RELEASE-NOTES.md`](apk/RELEASE-NOTES.md)
-> · full plan: [`ROADMAP.md`](ROADMAP.md).
+> v1.1.0 fixed the dead **Hint button** and added **Continue Quiz**
+> (save / resume unfinished sessions); **v1.1.1 is the bug-review release** —
+> it fixes 5 confirmed bugs (blank answers counted as wrong, a crash in
+> `finish()`, a per-second localStorage write storm, and UTC-based streaks)
+> and hardens the app (CSP, no credential leakage, keystore passwords from the
+> environment). Every item of the review is answered in
+> [`BUGFIX-REPORT.md`](BUGFIX-REPORT.md). Details:
+> [`apk/RELEASE-NOTES.md`](apk/RELEASE-NOTES.md) · plan: [`ROADMAP.md`](ROADMAP.md).
 
 ## What's in this repository
 
 ```
 .
 ├── apk/
-│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.1.0 (515 KB)
+│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.1.1 (507 KB)
 │   ├── app/                          # Android project (Java + WebView wrapper)
 │   │   └── src/main/assets/          # PWA bundled inside the APK (file:///android_asset/)
 │   ├── gradle/wrapper/               # Gradle wrapper
@@ -28,7 +33,8 @@ ISCSP exam preparation.
 ├── pwa/                              # ★ The app itself: self-contained PWA (offline, installable)
 ├── backend/                          # Optional Node + Prisma backend (earlier full-stack iteration)
 ├── frontend/                         # Optional React + Vite frontend (earlier full-stack iteration)
-├── tests/                            # JSDOM end-to-end suite for the PWA
+├── tests/                            # JSDOM e2e + regression suites for the PWA
+├── BUGFIX-REPORT.md                  # Answer to the deep code review (BUGS.md), item by item
 ├── ROADMAP.md                        # What is done, what is next, what is planned
 └── README.md                         # This file
 ```
@@ -45,7 +51,7 @@ and may be useful if you want a server-side multi-user deployment.
 ## Install the Android app
 
 1. Download [`Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk)
-   (515 KB, v1.1.0) onto your phone — email it to yourself, use a USB cable,
+   (507 KB, v1.1.1) onto your phone — email it to yourself, use a USB cable,
    a cloud drive, or download it straight from GitHub on the device.
 2. Tap the file. If Android asks, allow "Install from unknown sources" for
    this file only.
@@ -61,11 +67,11 @@ With a computer and USB debugging enabled: `adb install -r Mental-Maths-Practice
 | What | Value |
 |---|---|
 | Package | `com.iscsp.mentalmatharena` |
-| Version | versionCode 2 · versionName 1.1.0 |
-| Size | 515 KB |
+| Version | versionCode 3 · versionName 1.1.1 |
+| Size | 507 KB (519,003 bytes) |
 | Min / target SDK | 21 (Android 5.0) / 34 (Android 14) |
 | Signature | v1 + v2 + v3, release key SHA-256 `2d7470c4a5239d5d…` |
-| MD5 | `c0f3d00bbd62abe9d017492e57f7fa1d` |
+| MD5 | `6605300584c4777f3305ce90bde6a0d9` |
 
 ## Live progress log
 
@@ -284,12 +290,25 @@ router, real localStorage):
 cd tests && npm install && npm test
 ```
 
-14 scenarios cover the full journey: hint generation, the hint button,
-auto-save on Back, the Continue card, surviving a refresh, resume fidelity,
-timer preservation, multiple unfinished quizzes, discard, quit confirmation,
-completion/cleanup, and regressions on existing screens. It also stress-tests
-the hint engine over 1,550 questions (every seed question plus generated ones)
-to guarantee no hint ever reveals its answer.
+```bash
+node tests/pwa.test.mjs          # 14 end-to-end scenarios
+node tests/regressions.test.mjs  # 13 regression scenarios for the bugs in BUGS.md
+APP_DIR=/path/to/assets node tests/pwa.test.mjs   # test a built bundle (e.g. an APK's assets/)
+```
+
+The 14 end-to-end scenarios cover the full journey: hint generation, the hint
+button, auto-save on Back, the Continue card, surviving a refresh, resume
+fidelity, timer preservation, multiple unfinished quizzes, discard, quit
+confirmation, completion/cleanup, and regressions on existing screens. They
+also stress-test the hint engine over 1,555 questions (every seed question
+plus generated ones) to guarantee no hint ever reveals its answer.
+
+The 13 regression scenarios (`R1`–`R13`) lock in each bug fixed in v1.1.1:
+blank-answer rejection, null-safe `finish()/pause()/quit()`, throttled
+countdown persistence, local-time streaks, deterministic snapshot ordering,
+Expert question generation, toast races, no salt/hash exposure,
+`deleteSession()`, negative fraction denominators, the CSP, and the
+category empty state. Each one fails against the pre-fix source.
 
 ### Step 18 — v1.1.0 released: APK built, signed and verified
 
@@ -311,6 +330,52 @@ to guarantee no hint ever reveals its answer.
   AndroidX (appcompat / material / webkit) that `MainActivity` never imports.
 - `apk/app/build.gradle` bumped to `versionCode 2` / `versionName "1.1.0"` so
   future Gradle builds stay in step with the released APK.
+
+### Step 19 — v1.1.1: deep code-review bug sweep (BUGS.md)
+
+An independent line-by-line review of every file (see `BUGS.md`) reported
+5 confirmed bugs plus ~40 observations. All of them are now resolved or
+answered item by item in [`BUGFIX-REPORT.md`](BUGFIX-REPORT.md).
+
+**Confirmed bugs — fixed**
+
+| # | Bug | Fix |
+|---|---|---|
+| A | `Quiz.submit(null / undefined / "")` recorded a blank answer as a **wrong attempt**, corrupting accuracy, streaks and history | `submit()` now refuses blank answers and returns `null` without persisting anything |
+| B | `Quiz.finish()` threw `TypeError` when no session was active | guarded: `finish()` returns `null`; `pause()`/`quit()` were already safe and are now covered by tests |
+| D | The countdown wrote `localStorage` **every second** (~600 synchronous writes in a 10-minute quiz) | persistence throttled to 1 write per 5 ticks; `pause()`, `quit()`, `submit()` and `next()` still flush the exact remaining time |
+| E | `dailyStreak()` and `questionsToday()` used the **UTC** date, so in Asia/Karachi (UTC+5) the day rolled over at 19:00 | both now use a local-time `dayKey()`; a regression test pins the behaviour in a UTC+5 timezone |
+
+**Hardening / cleanup shipped in the same release**
+
+- Content-Security-Policy meta tag (no remote resource is loaded anywhere).
+- `getAccountDetails()` no longer returns the password salt or hash.
+- Keystore passwords are read from `KS_PASS` / `KS_ALIAS` instead of being
+  hardcoded in `build-offline.sh`, `build.sh` and `app/build.gradle`.
+- WebView: `setAllowFileAccessFromFileURLs(false)` and
+  `setAllowUniversalAccessFromFileURLs(false)` are now explicit.
+- Toast timers no longer race (a second toast is no longer hidden early).
+- `StateStore.deleteSession()` replaces direct manipulation of `State.data`.
+- Snapshots saved in the same millisecond now sort deterministically.
+- The **Expert** difficulty finally generates Expert questions (successive
+  percentage change, reverse percentage, harmonic average speed), each with a
+  method-teaching hint; categories with no seed questions now say
+  "Generator only" instead of "0 seeded questions".
+- Service worker cache bumped to `iscsp-mm-v7`; `parseFraction` accepts a
+  negative denominator; `<details>` keeps `aria-expanded` in sync; the theme
+  icon stroke weights match.
+
+**Verification** — `node tests/pwa.test.mjs` → 14/14 ·
+`node tests/regressions.test.mjs` → 13/13 · hint sweep over 1,555 questions →
+0 missing hints, 0 answer-revealing hints. Both suites were also run against
+the `assets/` extracted from the finished APK → 27/27.
+
+**Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 519,003 bytes (507 KB),
+`versionCode 3`, `versionName 1.1.1`, minSdk 21 / targetSdk 34, signed
+v1 + v2 + v3 with the same release key, MD5 `6605300584c4777f3305ce90bde6a0d9`.
+`apk/build-offline.sh` now reads `versionCode` / `versionName` from
+`app/build.gradle`, so there is a single source of truth for the version.
+
 
 ## How to run the PWA locally
 
@@ -374,4 +439,4 @@ never ship a stale copy of the app again.
 - Native Android WebView wrapper for packaging (the PWA is bundled in `assets/`,
   so the app needs no network and no hosted URL — no Bubblewrap / TWA required)
 - JDK 17 + Android SDK (aapt2, d8, zipalign, apksigner) or Gradle for the APK
-- JSDOM end-to-end tests (`tests/`) driving the real app
+- JSDOM end-to-end + regression tests (`tests/`) driving the real app

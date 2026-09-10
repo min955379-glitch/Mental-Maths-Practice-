@@ -37,8 +37,11 @@ JAVAC="$JAVA_HOME/bin/javac"
 
 SRC="app/src/main"
 OUT="build-offline"
-VERSION_CODE="${VERSION_CODE:-2}"
-VERSION_NAME="${VERSION_NAME:-1.1.0}"
+# Single source of truth: app/build.gradle (override with VERSION_CODE=/VERSION_NAME=)
+GRADLE_VCODE=$(grep -oE 'versionCode[[:space:]]+[0-9]+' app/build.gradle | grep -oE '[0-9]+' | head -1)
+GRADLE_VNAME=$(grep -oE 'versionName[[:space:]]+"[^"]+"' app/build.gradle | sed -E 's/.*"(.*)"/\1/' | head -1)
+VERSION_CODE="${VERSION_CODE:-${GRADLE_VCODE:-2}}"
+VERSION_NAME="${VERSION_NAME:-${GRADLE_VNAME:-1.1.0}}"
 
 for f in "$AAPT2" "$D8" "$ZIPALIGN" "$APKSIGNER" "$PLATFORM"; do
   [ -f "$f" ] || { echo "ERROR: missing $f" >&2; exit 1; }
@@ -48,7 +51,9 @@ done
 echo "Syncing ../pwa/ into $SRC/assets ..."
 rm -rf "$SRC/assets"
 mkdir -p "$SRC/assets"
-cp -r ../pwa/. "$SRC/assets/"
+rm -rf "$SRC/assets"
+mkdir -p "$SRC/assets"
+tar -C ../pwa --exclude=node_modules --exclude=.DS_Store --exclude="*.swp" -cf - . | tar -xf - -C "$SRC/assets"
 echo "  $(du -sh "$SRC/assets" | cut -f1) of assets"
 
 rm -rf "$OUT"
@@ -104,14 +109,22 @@ echo "Packaging classes.dex ..."
 echo "Aligning ..."
 "$ZIPALIGN" -f -p 4 "$OUT/app-unaligned.apk" "$OUT/app-unsigned.apk"
 
+# Signing credentials are read from the environment:
+#   KS_PASS   keystore + key password   (default: the project's public demo password)
+#   KS_ALIAS  key alias                 (default: iscspmatharena)
+# Override them for a real release build, e.g.
+#   KS_PASS='********' bash build-offline.sh
+export KS_PASS="${KS_PASS:-mentalmath}"
+export KS_ALIAS="${KS_ALIAS:-iscspmatharena}"
+
 # 8. Sign with the existing release key (same key => installs as an update)
 echo "Signing ..."
 rm -f Mental-Maths-Practice.apk
 "$APKSIGNER" sign \
   --ks release.keystore \
-  --ks-pass pass:mentalmath \
-  --key-pass pass:mentalmath \
-  --ks-key-alias iscspmatharena \
+  --ks-pass env:KS_PASS \
+  --key-pass env:KS_PASS \
+  --ks-key-alias "${KS_ALIAS:-iscspmatharena}" \
   --out Mental-Maths-Practice.apk \
   "$OUT/app-unsigned.apk"
 
