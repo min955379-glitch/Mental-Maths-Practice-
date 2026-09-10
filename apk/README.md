@@ -1,6 +1,6 @@
 # ISCSP Mental Math AI Arena — Android APK
 
-The Android APK at `ISCSP-Mental-Math-Arena.apk` is a **fully self-contained
+The Android APK at `Mental-Maths-Practice.apk` (v1.1.0) is a **fully self-contained
 native Android app** that bundles the PWA in its `assets/` folder. The PWA
 loads from `file:///android_asset/index.html`, which means:
 
@@ -13,14 +13,15 @@ loads from `file:///android_asset/index.html`, which means:
 
 | File | Description |
 |---|---|
-| `ISCSP-Mental-Math-Arena.apk` | **The signed, installable Android APK (~4.6 MB)** |
+| `Mental-Maths-Practice.apk` | **The signed, installable Android APK (~515 KB, v1.1.0)** |
 | `app/` | Android Studio project (Java + WebView) |
 | `app/src/main/assets/` | The bundled PWA (mirror of `../pwa/`) |
 | `app/src/main/java/.../MainActivity.java` | WebView wrapper that loads the PWA |
 | `build.gradle`, `settings.gradle`, etc. | Gradle build files |
 | `gradle/wrapper/` | Gradle wrapper |
 | `release.keystore` | Signing key — **back this up!** |
-| `build.sh` | One-command rebuild script |
+| `build.sh` | One-command Gradle rebuild script |
+| `build-offline.sh` | Rebuild without Gradle, straight from the SDK tools |
 
 ## How to install the APK
 
@@ -69,7 +70,8 @@ echo "sdk.dir=$ANDROID_HOME" > local.properties   # or your SDK path
 bash build.sh
 ```
 
-This produces a fresh `ISCSP-Mental-Math-Arena.apk`.
+This produces a fresh `Mental-Maths-Practice.apk`. For a Gradle-free build run
+`bash build-offline.sh` instead (this is how v1.1.0 was produced).
 
 ### Manual build
 

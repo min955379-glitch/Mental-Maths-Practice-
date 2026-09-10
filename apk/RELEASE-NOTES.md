@@ -1,5 +1,64 @@
 # Release Notes
 
+## v1.1.0 — Hint button fixed + Continue Quiz (resumable sessions)
+
+**Release date:** 2026-09-10
+**File:** `apk/Mental-Maths-Practice.apk` (515 KB, versionCode 2, versionName 1.1.0)
+**Signed with the original release key** (SHA-256 `2d7470c4a523…`), so it installs
+as an in-place update of the previous build and keeps all your stats and progress.
+Verified with v1, v2 and v3 signature schemes.
+
+### Fixed: the Hint button did nothing
+
+The hint engine (`pwa/js/hints.js`) was never reaching the installed app — the
+bundled `assets/` folder was listed in `.gitignore`, so new PWA files were
+silently left out of the APK. Fixed, and the hint feature itself is now real:
+
+- Hints are generated from the actual question (numbers, units and wording) for
+  all 18 categories, e.g. *"What is 15% of 240?"* → *"Try splitting 15% into
+  10% + 5% pieces…"*, never the answer.
+- Every hint passes an answer-safety guard, so a hint can never reveal the
+  result (verified across 1,550 questions).
+- Smooth fade-in, then the button turns green with a tick — **"Hint shown"** —
+  disables itself, and extra clicks never duplicate or re-roll the hint.
+- Off during Full Test and when "Allow hints" is disabled in Settings.
+
+### New: Continue Quiz
+
+- Leaving a quiz any way (Back button, side nav, or **Quit Quiz** with the
+  confirmation *"Are you sure you want to leave? Your progress will be saved."*)
+  now saves the session instead of losing it.
+- The dashboard shows a **Continue Quiz** card: mode, `7 / 20 completed`,
+  progress %, remaining questions, time left on timed quizzes, and a Continue
+  button with an SVG play icon.
+- Resuming restores the exact question, the original order, prior answers,
+  correct/incorrect flags, timings, mode, category, difficulty, question count
+  and the countdown. Nothing is regenerated or reset.
+- Several unfinished quizzes coexist (newest first, older ones in a collapsible
+  list with Discard). Finishing one removes it from Continue Quiz and keeps it
+  in History and Results.
+
+### Also fixed
+
+- The History screen never listed any sessions (rows were built but never added
+  to the page).
+- Deleting a session bypassed the state store and rewrote storage directly.
+- A resumed session was erased from storage before it was re-saved, so leaving
+  straight after a resume could lose it.
+- The countdown kept running after navigating away from a quiz.
+
+### Building
+
+Gradle (needs JDK 17 + Android SDK platform-34 / build-tools 34.0.0):
+
+```bash
+cd apk && bash build.sh
+```
+
+Or without Gradle at all — the app is a plain WebView wrapper with no
+third-party dependencies, so `bash apk/build-offline.sh` produces the same
+signed APK straight from the SDK tools. That is how this release was built.
+
 ## v1.0.0 — Initial release
 
 **Release date:** 2026-09-09

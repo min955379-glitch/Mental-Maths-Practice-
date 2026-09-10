@@ -14,7 +14,7 @@ import { JSDOM } from 'jsdom';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const PWA = path.join(ROOT, 'pwa');
+const PWA = process.env.APP_DIR ? path.resolve(process.env.APP_DIR) : path.join(ROOT, 'pwa');
 
 // ---------------------------------------------------------------- harness
 const rawHtml = fs.readFileSync(path.join(PWA, 'index.html'), 'utf8');
