@@ -195,7 +195,7 @@
   };
 
   BUILDERS['Fractions'] = function (t) {
-    if (/(\d+)\s*\/\s*\d+\s*[-+]\s*\d+\s*\/\s*\d+/.test(t)) return 'Use the butterfly method: cross-multiply for the numerator, multiply the denominators for the denominator, then simplify.';
+    if (/(\d+)\s*\/\s*\d+\s*[-+\u2212\u2013]\s*\d+\s*\/\s*\d+/.test(t)) return 'Use the butterfly method: cross-multiply for the numerator, multiply the denominators for the denominator, then simplify.';
     if (/biggest|largest|smallest|greatest|least/i.test(t)) return 'Compare the fractions two at a time by cross-multiplying, or see how far each one sits below 1 whole.';
     if (/\bof\b/.test(t)) return 'Divide by the denominator first when it cancels cleanly, then multiply by the numerator.';
     if (/inside|outside|in water|in mud|in the air|remain/i.test(t)) return 'Add up the fractions given, subtract that from one whole, then take that fraction of the total.';
