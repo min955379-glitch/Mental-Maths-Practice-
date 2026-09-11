@@ -178,5 +178,48 @@ test('the confirm dialog can never be stranded off-screen', () => {
   assert(actions && /min-height:\s*44px/.test(actions[0]), 'dialog buttons need a 44px tap target');
 });
 
+console.log('\nContact Us (WhatsApp + developer card)');
+
+test('the WhatsApp tokens pass in both themes', () => {
+  const checks = [
+    ['white label on the WhatsApp button', '#ffffff', 'c-wa', 4.5],
+    ['WhatsApp button against the card', 'c-wa', 'c-surface', 3.0],
+    ['WhatsApp glyph on its chip', 'c-wa-soft-text', 'c-wa-soft', 4.5],
+    ['WhatsApp chip ring against the card', 'c-wa-border', 'c-surface', 1.3],
+  ];
+  for (const [name, fgName, bgName, min] of checks) {
+    const fg = fgName === '#ffffff' ? '#ffffff' : null;
+    const lightRatio = contrast(fg || light(fgName), light(bgName));
+    const darkRatio = contrast(fg || dark(fgName), dark(bgName));
+    assert(lightRatio >= min, `${name} (light) ${light(fgName)} on ${light(bgName)} is ${lightRatio.toFixed(2)}:1`);
+    assert(darkRatio >= min, `${name} (dark) ${dark(fgName)} on ${dark(bgName)} is ${darkRatio.toFixed(2)}:1`);
+  }
+});
+
+test('the Contact Us rules only use tokens that exist', () => {
+  const start = CSS.indexOf('Contact Us\n   Same cards');
+  assert(start >= 0, 'the Contact Us style block is missing');
+  const blockText = CSS.slice(start);
+  const used = new Set([...blockText.matchAll(/var\(--([\w-]+)\)/g)].map((m) => m[1]));
+  assert(used.size > 0, 'the Contact Us block uses no design tokens');
+  // Every custom property declared in :root (colours, shadows, radii...).
+  const rootStart = CSS.indexOf(':root {');
+  const declared = new Set([...CSS.slice(rootStart, CSS.indexOf('}', rootStart)).matchAll(/--([\w-]+)\s*:/g)].map((m) => m[1]));
+  for (const token of used) {
+    assert(declared.has(token), `Contact Us uses --${token}, which is not declared in :root`);
+  }
+  // And the small print must not fall back to the 3.1:1 soft token.
+  assert(/\.developer-credit[^}]*--c-text-muted/.test(blockText), 'the credit line must use --c-text-muted (4.5:1+)');
+  assert(/\.wa-note[^}]*--c-text-muted/.test(blockText), 'the WhatsApp footnote must use --c-text-muted (4.5:1+)');
+});
+
+test('the developer photo is never given a colour-only identity', () => {
+  const m = CSS.match(/\.developer-photo\s*{[^}]*}/);
+  assert(m, '.developer-photo rule is missing');
+  assert(/border:\s*1px solid var\(--c-border-strong\)/.test(m[0]), 'the photo needs a visible ring in both themes');
+  assert(/object-fit:\s*cover/.test(m[0]), 'object-fit: cover crops instead of distorting');
+  assert(/aspect-ratio:\s*1 \/ 1/.test(m[0]), 'a 1:1 box guarantees the photo is square');
+});
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed ? 1 : 0);

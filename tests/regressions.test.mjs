@@ -286,10 +286,18 @@ await test('R12. A Content-Security-Policy is declared and nothing loads from th
   const files = ['index.html', 'sw.js', 'manifest.webmanifest', 'css/styles.css'].concat(
     fs.readdirSync(path.join(PWA, 'js')).map((f) => 'js/' + f)
   );
+  // A user-initiated outbound link is not a loaded resource: the Contact Us
+  // page hands a WhatsApp URL to the platform (WhatsApp, or the browser when
+  // WhatsApp is not installed). Nothing is fetched from it, so the app is
+  // still offline-first - and nothing else remote is tolerated.
+  const OUTBOUND = [
+    'https://wa.me/03485581969?text=Hey!%20We%20want%20you%20to%20improve%20these%20things%20in%20the%20Mental%20Maths%20Practice%20application......',
+  ];
   for (const rel of files) {
     const src = fs.readFileSync(path.join(PWA, rel), 'utf8');
-    const remote = src.match(/https?:\/\/(?!www\.w3\.org)[^\s"'()]+/g);
-    assert(!remote, `${rel} references a remote resource: ${remote && remote[0]}`);
+    const remote = (src.match(/https?:\/\/(?!www\.w3\.org)[^\s"'()]+/g) || [])
+      .filter((u) => !OUTBOUND.some((a) => a.startsWith(u) || u.startsWith(a)));
+    assert(!remote.length, `${rel} references a remote resource: ${remote && remote[0]}`);
   }
 });
 

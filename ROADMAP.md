@@ -2,9 +2,9 @@
 
 **App:** Mental Maths Practice (ISCSP exam preparation)
 **Repo:** [min955379-glitch/Mental-Maths-Practice-](https://github.com/min955379-glitch/Mental-Maths-Practice-)
-**Latest release:** **v1.2.2** (2026-09-11) — `apk/Mental-Maths-Practice.apk`, 583 KB, signed v1+v2+v3
-**Package:** `com.iscsp.mentalmatharena` (versionCode 6) · **PWA cache:** `iscsp-mm-v9`
-**Last reviewed:** v1.2.2 — Discard Quiz root cause fixed (stale service worker + unverified delete) and the dark theme rebuilt on measured WCAG contrast
+**Latest release:** **v1.3.0** (2026-09-11) — `apk/Mental-Maths-Practice.apk`, 612 KB, signed v1+v2+v3
+**Package:** `com.iscsp.mentalmatharena` (versionCode 7) · **PWA cache:** `iscsp-mm-v10`
+**Last reviewed:** v1.3.0 — the stray-brace bug that killed `box-sizing` is fixed, the quiz controls are re-laid-out, and Contact Us + WhatsApp are live
 
 ---
 
@@ -13,11 +13,11 @@
 | Path | Status | What it is |
 |---|---|---|
 | `pwa/` | **ACTIVE / shipping** | The app itself: self-contained progressive web app — no build step, no backend, works offline, installable, and bundled into the Android APK. **All new features land here.** |
-| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.2.2, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
+| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.3.0, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
 | `apk/build.sh` | ACTIVE | Gradle rebuild: syncs `pwa/` → assets, `gradle assembleRelease`, signs with `release.keystore`. |
 | `apk/build-offline.sh` | ACTIVE | Gradle-free rebuild straight from the SDK tools (aapt2 → javac → d8 → zipalign → apksigner). This is how v1.1.0 was produced. |
 | `tools/question_bank/` | ACTIVE | Deterministic Python bank generator: 345 question families → 1,080 machine-verified questions across 18 categories (see `VALIDATION.md`). |
-| `tests/` | ACTIVE | JSDOM suites driving the real app: `pwa.test.mjs` (14 end-to-end scenarios) + `regressions.test.mjs` (15 regression scenarios) + `quiz-actions.test.mjs` (6 action-bar scenarios) + `content-difficulty.test.mjs` (15 bank/chooser scenarios) + `timer-discard.test.mjs` (19 timer/discard scenarios) + `theme-contrast.test.mjs` (49 WCAG contrast + light-theme checks) + a 1,555-question hint sweep. |
+| `tests/` | ACTIVE | JSDOM suites driving the real app: `pwa.test.mjs` (14 end-to-end scenarios) + `regressions.test.mjs` (15 regression scenarios) + `quiz-actions.test.mjs` (6 action-bar scenarios) + `content-difficulty.test.mjs` (15 bank/chooser scenarios) + `timer-discard.test.mjs` (19 timer/discard scenarios) + `theme-contrast.test.mjs` (52 WCAG contrast + light-theme checks) + `css-layout.test.mjs` (13 stylesheet-integrity/layout checks) + `contact-us.test.mjs` (14 Contact Us/WhatsApp checks). Three headless-Chromium harnesses measure the real rendered result: `layout_check.py`, `contrast_check.py`, `browser-journey.py`. + a 1,555-question hint sweep. |
 | `backend/` | PRESERVED (legacy) | Node + Express + Prisma (SQLite) API from the earlier full-stack iteration — the starting point if cloud sync ever lands. |
 | `frontend/` | PRESERVED (legacy) | React 18 + Vite + TypeScript SPA from the earlier iteration; needs the backend running, not used by the shipping app. |
 
@@ -197,6 +197,50 @@ passing vacuously (`0 === 0`) were strengthened.
 **Verification** — 118/118 across six suites, re-run against the assets
 extracted from the finished APK.
 
+### 1.12 v1.3.0 — quiz control layout, Contact Us + WhatsApp (2026-09-11)
+
+**The answer input hanging out of the card — root cause**
+- [x] A stray `}` at the end of the `[data-theme="dark"]` token block was
+      absorbed into the next rule's selector, so Chromium discarded
+      `* { box-sizing: border-box; }`. Every `width: 100%` control grew by its
+      own padding + border (the answer input by 34px, out through the card's
+      right edge). Brace removed; the stylesheet is now parsed by a real CSS
+      parser in the test suite, which fails if that rule ever disappears again.
+- [x] Form controls re-assert `box-sizing: border-box; max-width: 100%`, the
+      quiz form and input set `min-width: 0` / `margin: 0`, so the field always
+      matches the card's content box with equal left/right gaps.
+
+**Quiz control hierarchy**
+- [x] Submit Answer moved onto its own row, centred under the input, sized by
+      its label with `white-space: nowrap`: 168 × 46px at every width (was
+      116 × 68px with the label wrapped in two at 320px).
+- [x] Hint (left) and Quit (right) share the row below at identical widths,
+      pinned to the card's padding box. No hard-coded pixel widths anywhere.
+
+**Contact Us**
+- [x] New `#/contact` route + side-nav entry; three cards on the existing
+      design system (welcome/support, developer, WhatsApp).
+- [x] Developer card with the supplied photo (circular, 1:1, `object-fit:
+      cover`, fluid `clamp()` sizing), "Muhammad Ibrahim", "Developer of Mental
+      Maths Practice" and "Developed by Muhammad Ibrahim".
+- [x] WhatsApp button: a real `<a>` to the exact
+      `https://wa.me/03485581969?text=...` URL, with an accessible label, the
+      shared WhatsApp glyph, and no `target` (which would break inside the
+      app's WebView).
+- [x] `MainActivity` now hands outbound http(s) links to the platform
+      (`ACTION_VIEW`), so WhatsApp opens the chat with the pre-filled message
+      and the browser/WhatsApp Web is the fallback; local `file://` pages still
+      load in the WebView exactly as before.
+- [x] New `--c-wa*` tokens: the white label measures 5.4:1 (light) and 4.9:1
+      (dark); every element on the page was measured in both themes.
+- [x] Service worker bumped to `iscsp-mm-v10` and the developer photo is
+      precached.
+
+**Verification** — 148/148 across eight suites plus three headless-Chromium
+harnesses (8/8 viewport geometry, every contrast pair in both themes, 30/30
+end-to-end journey), all re-run against the `assets/` extracted from the
+finished APK.
+
 ---
 
 ## 2. In progress / next up
@@ -247,6 +291,7 @@ extracted from the finished APK.
 
 | Version | Date | Highlights | File |
 |---|---|---|---|
+| **v1.3.0** | 2026-09-11 | Quiz answer input back inside the card (a stray brace had silently deleted the universal `box-sizing: border-box` rule); Submit Answer compact, centred and on one line; Hint/Quit on one aligned row; new Contact Us page with the developer profile and a real WhatsApp button (03485581969, exact pre-filled message, opens WhatsApp with browser fallback); 30 new tests + 3 real-browser harnesses | `apk/Mental-Maths-Practice.apk` |
 | **v1.2.2** | 2026-09-11 | Discard Quiz root cause: the offline service worker was serving stale JS (cache bumped to v9) and the delete is now verified with a fallback match, live re-render and user feedback; dark theme rebuilt on measured WCAG contrast (icons 1.4:1 → 9.2:1) with the light theme untouched; 68 new tests | `apk/Mental-Maths-Practice.apk` |
 | **v1.2.1** | 2026-09-11 | Discard Quiz really deletes the selected unfinished quiz (id-safe, persisted, live dashboard refresh, gone after reload) and the quiz timer works in every mode on a monotonic timestamp clock (runs across questions, resumes correctly, countdowns still finish the quiz); 15 new timer/discard tests | `apk/Mental-Maths-Practice.apk` |
 | **v1.2.0** | 2026-09-11 | Content + difficulty release: **1,130 verified questions** (60 per category × 18, 20/20/20 Easy/Medium/Hard), **EASY · MEDIUM · HARD chooser before every quiz** with per-difficulty accuracy + adaptive recommendation, generators for every category, rotation without repeats, reworked quiz action bar (Submit primary right, Hint \| Quit below) and an **in-app Quit modal** replacing `confirm()`; 50/50 tests | `apk/Mental-Maths-Practice.apk` |
@@ -283,7 +328,12 @@ node tests/regressions.test.mjs    # 15 regression scenarios (BUGS.md fixes)
 node tests/quiz-actions.test.mjs   # 6 quiz action-bar + Quit dialog scenarios
 node tests/content-difficulty.test.mjs  # 15 question-bank + difficulty chooser scenarios
 node tests/timer-discard.test.mjs      # 19 quiz timer + discard scenarios (uses real wall-clock time)
-node tests/theme-contrast.test.mjs     # 49 WCAG contrast + light-theme regression checks
+node tests/theme-contrast.test.mjs     # 52 WCAG contrast + light-theme regression checks
+node tests/css-layout.test.mjs         # 13 stylesheet integrity + quiz control layout checks
+node tests/contact-us.test.mjs         # 14 Contact Us + WhatsApp end-to-end checks
+python3 tests/layout_check.py          # real-Chromium geometry at 8 viewport sizes
+python3 tests/contrast_check.py        # real-Chromium contrast, both themes
+python3 tests/browser-journey.py       # real-Chromium end-to-end journey (30 steps)
 
 # 2. Point the same suites at any built bundle (e.g. assets extracted from an APK)
 APP_DIR=/path/to/extracted/assets node tests/pwa.test.mjs

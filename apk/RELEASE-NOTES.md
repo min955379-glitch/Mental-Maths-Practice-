@@ -1,5 +1,82 @@
 # Release Notes
 
+## v1.3.0 — Quiz control layout + Contact Us with WhatsApp
+
+**Release date:** 2026-09-11
+**File:** `apk/Mental-Maths-Practice.apk` (612 KB / 625,641 bytes, versionCode 7, versionName 1.3.0)
+**MD5:** `ab52e2f937356704bbc140dc8d4632d2`
+**SHA-256:** `c8e7eb5b27df26a92dff7434b1c2bbae6fa42f618e2283f67554fbf3eb98f9b9`
+**Signed with the original release key** (SHA-256 `2d7470c4a5239d5df72090f5b0329b99efd394a305c54464b2800cb1ae129d43`), verified v1 + v2 + v3 →
+installs as an in-place update over every earlier build and keeps your progress.
+
+### Fixed: the answer input was hanging out of the quiz card
+
+The field was 34px wider than the card's content box and poked through its
+right-hand edge. The cause was one stray `}` at the end of the dark-theme token
+block added in v1.2.2: CSS parsers fold a stray closing brace into the *next*
+rule's selector, so the browser silently discarded
+`* { box-sizing: border-box; }`. Every `width: 100%` control in the app grew by
+its own padding + border — the answer input, the sign-in fields, the dialog
+buttons and the Continue Quiz buttons.
+
+- The brace is gone and the form controls re-assert
+  `box-sizing: border-box; max-width: 100%`.
+- The quiz input now matches the card's content box exactly, with equal
+  left/right margins, at 320px through to desktop.
+- A new test parses the stylesheet with a real CSS parser and fails if that
+  universal rule ever disappears again.
+
+### Fixed: Submit Answer was oversized and wrapped onto two lines
+
+It shared the top row of a two-column grid, so on a phone it was squeezed to
+half the card (116px at 320px wide) and the label broke into "Submit /
+Answer" — a 68px-tall button. The controls are now three clean rows:
+
+```
+[ Answer input .................... ]
+          [ Submit Answer ]
+[   Hint   ]         [   Quit   ]
+```
+
+Submit Answer is centred under the field, sized by its label and never wrapped
+(168 × 46px at every width — still a comfortable touch target). Hint and Quit
+share the row below at identical widths, pinned to the card's edges. Verified
+at 320, 360, 393, 412, 480, 768, 1024 and 1280 pixels: no overflow, no
+overlap, no clipped text.
+
+### New: Contact Us
+
+A `#/contact` route with a side-nav entry, built from the app's own cards,
+type scale and tokens:
+
+- **Welcome & Support** — your message to users, word for word.
+- **Developer** — the photo you supplied (circular, never distorted, fluid
+  sizing), **Muhammad Ibrahim**, *Developer of Mental Maths Practice*, and
+  "Developed by Muhammad Ibrahim".
+- **WhatsApp** — a real link to
+  `https://wa.me/03485581969?text=Hey!%20We%20want%20you%20to%20improve%20these%20things%20in%20the%20Mental%20Maths%20Practice%20application......`
+
+The button is a genuine `<a>` — no JavaScript standing in for it. On Android
+the app now hands outbound links to the platform, so tapping it opens
+**WhatsApp** with the number `03485581969` and the message ready to send; if
+WhatsApp is not installed your browser opens WhatsApp Web instead. Verified in
+a real browser: the tap navigates, the number and the exact message survive
+the redirect, and nothing intercepts the click.
+
+Both themes were measured — the white label on the WhatsApp button is 5.4:1 in
+light mode and 4.9:1 in dark mode, and every heading, body line, icon and
+border on the page clears its WCAG target.
+
+### Verification
+
+148/148 automated tests across eight suites, plus three headless-Chromium
+harnesses: 8/8 viewport geometry checks, every contrast pair in both themes,
+and a 30-step end-to-end journey (start → answer → submit → feedback → hint →
+quit → continue → discard → reload). All re-run against the assets extracted
+from this signed APK.
+
+---
+
 ## v1.2.2 — Discard Quiz root cause + dark-theme accessibility
 
 **Release date:** 2026-09-11

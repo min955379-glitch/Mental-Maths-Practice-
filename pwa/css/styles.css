@@ -24,6 +24,13 @@
   --c-warning: #b76a00;
   --c-warning-bg: #fff3e0;
   --c-warning-border: #f0d6a3;
+  /* WhatsApp contact (Contact Us page). Deep enough that the white label on
+     the button clears 4.5:1 on a card in both themes: 5.4:1 light / 4.9:1 dark. */
+  --c-wa: #0d7a52;
+  --c-wa-strong: #0a5f40;
+  --c-wa-soft: #e6f4ee;
+  --c-wa-soft-text: #0d7a52;
+  --c-wa-border: #a7dfc7;
   /* Semantic aliases. Their light values are exactly what the rules below
      used before, so the light theme is pixel-identical; only the dark theme
      overrides them (see [data-theme="dark"]). */
@@ -73,14 +80,28 @@
   --c-warning: #ffc061;
   --c-warning-bg: #36270d;
   --c-warning-border: #8a6420;
+  /* WhatsApp: lighter fill so the button does not sink into the navy card
+     (6.2:1 against it) while the white label still clears 4.5:1. */
+  --c-wa: #12805a;
+  --c-wa-strong: #0f6b4b;
+  --c-wa-soft: #123528;
+  --c-wa-soft-text: #6ee7b0;
+  --c-wa-border: #2f8a5f;
   /* Secondary button / toast fill: lifted off the page background. */
   --c-navy-800: #1a2a66;
   --c-navy-700: #22356f;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.6);
-}}
+}
+/* Every element sizes its padding and border inside its declared width. This
+   rule is what keeps `width: 100%` controls (the answer input, the auth
+   fields, the modal) inside the card they live in - it must stay the very
+   first rule after the tokens, and the block above must close exactly once. */
 * { box-sizing: border-box; }
+/* Restated for form controls: a percentage width has to include padding and
+   border, and a control must never grow past the container it lives in. */
+input, select, textarea, button { box-sizing: border-box; max-width: 100%; }
 html, body { margin: 0; padding: 0; }
 html { -webkit-text-size-adjust: 100%; }
 body {
@@ -352,32 +373,43 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--c-indigo
 [data-theme="dark"] .quiz-cat { color: var(--c-accent-text); }
 .quiz-q { font-size: 22px; font-weight: 600; margin: 0 0 18px; line-height: 1.35; }
 @media (min-width: 700px) { .quiz-q { font-size: 26px; } }
-.quiz-form { display: flex; flex-direction: column; gap: 12px; }
-.quiz-form input[type="text"] { font-size: 18px; font-weight: 600; padding: 14px 16px; letter-spacing: 0.01em; }
+/* Quiz answer area
+   The field is a block-level flex item that fills the card's content box and
+   nothing else: width/box-sizing come from the global input rule, `min-width:0`
+   stops an intrinsic minimum from ever pushing it past the card, and the
+   margins are zero so the left and right gaps are exactly the card padding. */
+.quiz-form { display: flex; flex-direction: column; gap: 14px; width: 100%; min-width: 0; }
+.quiz-form input[type="text"] {
+  width: 100%; min-width: 0; max-width: 100%; margin: 0;
+  font-size: 18px; font-weight: 600; padding: 14px 16px; letter-spacing: 0.01em;
+}
 /* Quiz action area
-   Row 1: Submit Answer — primary action, right aligned.
-   Row 2: Hint (left) | Quit (right) — secondary actions.
-   A two-column grid keeps both rows on one alignment grid at any width. */
+   Row 1: Submit Answer - the primary action, centred under the field it
+          belongs to, sized by its label and never wider than the card.
+   Row 2: Hint (left) | Quit (right) - the secondary actions, both the same
+          width, pinned to the edges of the same grid.
+   Nothing here uses a hard-coded width: the grid columns are fractional, the
+   primary button is `width: auto` with `white-space: nowrap`, and the two
+   secondary buttons take the whole column up to a shared maximum. */
 .quiz-actions {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
-  margin-top: 4px;
-  padding-bottom: 2px;
+  width: 100%; min-width: 0;
+  margin-top: 2px;
 }
-.quiz-actions .btn { min-width: 0; }
-#qSubmit { grid-column: 2; grid-row: 1; justify-self: end; min-width: min(200px, 100%); padding-inline: 24px; }
-#qHint   { grid-column: 1; grid-row: 2; justify-self: start; }
-#qQuit   { grid-column: 2; grid-row: 2; justify-self: end; }
+.quiz-actions .btn { min-width: 0; max-width: 100%; white-space: nowrap; }
+#qSubmit {
+  grid-column: 1 / -1; grid-row: 1; justify-self: center;
+  width: auto; min-width: min(168px, 100%); max-width: 100%;
+  white-space: nowrap; padding-inline: 22px;
+}
+#qHint { grid-column: 1; grid-row: 2; justify-self: start; width: 100%; max-width: 220px; }
+#qQuit { grid-column: 2; grid-row: 2; justify-self: end;   width: 100%; max-width: 220px; }
 .btn-lg { min-height: 46px; font-size: 15px; }
-@media (max-width: 420px) {
+@media (max-width: 360px) {
+  .quiz-form { gap: 12px; }
   .quiz-actions { gap: 10px; }
-  #qSubmit { min-width: 100%; justify-self: stretch; }
-  #qHint, #qQuit { min-width: 0; }
-}
-@media (min-width: 700px) {
-  /* On wide screens keep the same hierarchy but tighten the two columns. */
-  .quiz-actions { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); max-width: 520px; margin-left: auto; }
 }
 .quiz-hint { margin: 10px 0 0; padding: 12px 14px; border-radius: var(--radius-md); background: var(--c-warning-bg); color: var(--c-warning); border: 1px solid var(--c-warning-border); font-size: 14px; line-height: 1.5; display: flex; align-items: flex-start; gap: 10px; opacity: 0; transform: translateY(-4px); transition: opacity 220ms ease, transform 220ms ease; }
 .quiz-hint.show { opacity: 1; transform: translateY(0); }
@@ -534,3 +566,55 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--c-indigo
   .continue-actions { flex-direction: column-reverse; align-items: stretch; }
   .continue-actions .btn { width: 100%; }
 }
+
+/* ---------------------------------------------------------------------------
+   Contact Us
+   Same cards, radii, spacing and type scale as the rest of the app. The only
+   new colours are the WhatsApp greens declared with the tokens above, so the
+   page is readable in dark mode without inventing a second design language.
+   --------------------------------------------------------------------------- */
+.contact-screen { max-width: 760px; }
+.contact-card + .contact-card { margin-top: 16px; }
+.contact-card-title {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 0 14px; font-size: 12px; font-weight: 800;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-accent-text);
+}
+.contact-card-title svg { flex: 0 0 auto; display: block; }
+.contact-welcome p { margin: 0 0 12px; font-size: 15px; line-height: 1.65; color: var(--c-text); }
+.contact-welcome p:last-child { margin-bottom: 0; color: var(--c-text-muted); }
+
+.developer { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.developer-photo {
+  /* The supplied photo is already cropped to a square, so it is never
+     distorted; the size is fluid and the intrinsic width/height attributes
+     reserve the space so the card does not shift while it loads. */
+  width: clamp(96px, 26vw, 132px); height: auto; aspect-ratio: 1 / 1;
+  border-radius: 50%; object-fit: cover; object-position: center 18%;
+  border: 1px solid var(--c-border-strong); background: var(--c-surface-2);
+  box-shadow: var(--shadow-md); margin: 0 0 14px;
+}
+.developer-name { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; color: var(--c-text); }
+.developer-role { margin: 2px 0 0; font-size: 14px; font-weight: 600; color: var(--c-text-muted); }
+/* --c-text-soft only reaches 3.1:1, so small print here uses the muted
+   token (5.8:1 light / 10.9:1 dark) and stays readable in both themes. */
+.developer-credit { margin: 10px 0 0; font-size: 12px; letter-spacing: 0.04em; color: var(--c-text-muted); }
+
+.wa-head { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; }
+.wa-icon {
+  width: 42px; height: 42px; flex: 0 0 42px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c-wa-soft); color: var(--c-wa-soft-text);
+  border: 1px solid var(--c-wa-border);
+}
+.wa-icon svg { display: block; }
+.wa-title { margin: 0; font-size: 16px; font-weight: 700; color: var(--c-text); }
+.wa-support { margin: 0 0 18px; font-size: 14.5px; line-height: 1.6; color: var(--c-text-muted); }
+.btn-whatsapp {
+  width: 100%; min-height: 50px; padding-inline: 20px;
+  background: var(--c-wa); border-color: var(--c-wa); color: #fff; font-size: 15px;
+}
+.btn-whatsapp:hover, .btn-whatsapp:focus-visible { background: var(--c-wa-strong); border-color: var(--c-wa-strong); text-decoration: none; }
+.btn-whatsapp svg { flex: 0 0 auto; }
+@media (min-width: 560px) { .btn-whatsapp { width: auto; min-width: 268px; } }
+.wa-note { margin: 12px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--c-text-muted); }

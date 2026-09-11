@@ -84,9 +84,13 @@ await test('A1. Action hierarchy: Submit Answer first and primary, Hint and Quit
   assert(quit.classList.contains('btn-ghost'), 'Quit should be a secondary action');
   assert(!quit.classList.contains('btn-primary'), 'Quit must not look like the primary action');
 
-  // Grid placement: row 1 right (Submit), row 2 left (Hint) / right (Quit).
+  // Grid placement: row 1 centred (Submit, under the input), row 2 left
+  // (Hint) / right (Quit). Submit used to be right-aligned; the app owner
+  // asked for it centred directly beneath the answer field instead.
   assert(/#qSubmit\s*\{[^}]*grid-row:\s*1/s.test(CSS), 'Submit should sit on the first grid row');
-  assert(/#qSubmit\s*\{[^}]*justify-self:\s*end/s.test(CSS), 'Submit should be right aligned');
+  assert(/#qSubmit\s*\{[^}]*justify-self:\s*center/s.test(CSS), 'Submit should be centred under the input');
+  assert(/#qSubmit\s*\{[^}]*grid-column:\s*1 \/ -1/s.test(CSS), 'Submit must span the row to centre');
+  assert(/#qSubmit\s*\{[^}]*white-space:\s*nowrap/s.test(CSS), '"Submit Answer" must never wrap to two lines');
   assert(/#qHint\s*\{[^}]*grid-row:\s*2/s.test(CSS), 'Hint should sit on the second grid row');
   assert(/#qQuit\s*\{[^}]*grid-row:\s*2/s.test(CSS), 'Quit should sit on the second grid row');
   assert(/#qHint\s*\{[^}]*justify-self:\s*start/s.test(CSS), 'Hint should be left aligned');

@@ -29,6 +29,12 @@ const note = (msg) => notes.push(msg);
 /* ---------------------------------------------------------------- helpers */
 const EMOJI = /[\u{1F000}-\u{1FAFF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{2190}-\u{21FF}\u{2900}-\u{297F}]/u;
 const REMOTE = /https?:\/\/(?!www\.w3\.org\/)[^\s"'`)]*\w/gi;
+/* A user-initiated outbound link is not a loaded resource: the Contact Us
+   page hands a WhatsApp URL to the platform, and nothing is fetched from it,
+   so the app stays offline-first. Anything else remote is still a violation. */
+const REMOTE_ALLOWLIST = [
+  'https://wa.me/03485581969?text=Hey!%20We%20want%20you%20to%20improve%20these%20things%20in%20the%20Mental%20Maths%20Practice%20application......',
+];
 
 /** Drop comments so prose about confirm() is not mistaken for a call. */
 function stripComments(src, html) {
@@ -72,10 +78,29 @@ note('checked for native confirm()/alert()/prompt()');
 /* ------------------------------------------------ 3. offline only */
 for (const file of [...sourceFiles, ...markupFiles]) {
   const src = fs.readFileSync(file, 'utf8');
-  const hits = [...src.matchAll(REMOTE)].map((m) => m[0]).filter((u) => !u.startsWith('http://www.w3.org/'));
+  const hits = [...src.matchAll(REMOTE)].map((m) => m[0])
+    .filter((u) => !u.startsWith('http://www.w3.org/'))
+    // The regex stops at the last word character, so a match can be a prefix
+    // of an allowlisted URL (the WhatsApp message ends in dots).
+    .filter((u) => !REMOTE_ALLOWLIST.some((a) => a.startsWith(u) || u.startsWith(a)));
   if (hits.length) fail(`remote reference in ${rel(file)} -> ${[...new Set(hits)].join(', ')}`);
 }
 note('checked for remote resources (offline-first)');
+
+/* --------------------------------- 3b. the WhatsApp link is the real one */
+{
+  const html = fs.readFileSync(path.join(PWA, 'index.html'), 'utf8');
+  const exact = REMOTE_ALLOWLIST[0];
+  if (!html.includes(`href="${exact}"`)) {
+    fail('the Contact Us WhatsApp link is missing or has been altered - it must stay byte-exact');
+  }
+  const decoded = decodeURIComponent(exact.split('?text=')[1]);
+  if (decoded !== 'Hey! We want you to improve these things in the Mental Maths Practice application......') {
+    fail('the pre-filled WhatsApp message was re-encoded or re-worded');
+  }
+  if (!/wa\.me\/03485581969/.test(exact)) fail('the WhatsApp number must be 03485581969');
+  note('the WhatsApp contact link is byte-exact (03485581969 + the supplied message)');
+}
 
 /* --------------------------------------------------- 4. bank rules */
 const bankPath = path.join(PWA, 'js', 'question-bank.js');

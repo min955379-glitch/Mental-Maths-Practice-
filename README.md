@@ -3,9 +3,9 @@
 A complete, polished, production-quality mental-math training platform for
 ISCSP exam preparation.
 
-> **Latest release — v1.2.2 (2026-09-11).** Signed Android APK:
+> **Latest release — v1.3.0 (2026-09-11).** Signed Android APK:
 > [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 583 KB,
-> versionCode 6, signed with the release key (v1 + v2 + v3 verified). It
+> versionCode 7, signed with the release key (v1 + v2 + v3 verified). It
 > installs as an in-place update over earlier builds and keeps your progress.
 > **v1.2.0 is the content + difficulty release:** **1,130 original questions**
 > across all 18 categories (50+ per category, split Easy / Medium / Hard by
@@ -24,7 +24,7 @@ ISCSP exam preparation.
 ```
 .
 ├── apk/
-│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.2.2 (583 KB)
+│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.3.0 (612 KB)
 │   ├── app/                          # Android project (Java + WebView wrapper)
 │   │   └── src/main/assets/          # PWA bundled inside the APK (file:///android_asset/)
 │   ├── gradle/wrapper/               # Gradle wrapper
@@ -73,11 +73,11 @@ With a computer and USB debugging enabled: `adb install -r Mental-Maths-Practice
 | What | Value |
 |---|---|
 | Package | `com.iscsp.mentalmatharena` |
-| Version | versionCode 6 · versionName 1.2.2 |
-| Size | 583 KB (596,899 bytes) |
+| Version | versionCode 7 · versionName 1.3.0 |
+| Size | 612 KB (625,641 bytes) |
 | Min / target SDK | 21 (Android 5.0) / 34 (Android 14) |
 | Signature | v1 + v2 + v3, release key SHA-256 `2d7470c4a5239d5d…` |
-| MD5 | `826106bb9e222fcdd13057023f20477f` |
+| MD5 | `ab52e2f937356704bbc140dc8d4632d2` |
 
 ## Live progress log
 
@@ -318,7 +318,9 @@ node tests/regressions.test.mjs      # 15 regression scenarios for the bugs in B
 node tests/quiz-actions.test.mjs     # 6 scenarios for the quiz action bar + Quit dialog
 node tests/content-difficulty.test.mjs  # 15 scenarios for the question bank + chooser
 node tests/timer-discard.test.mjs     # 19 scenarios for the quiz timer + discarding a quiz
-node tests/theme-contrast.test.mjs    # 49 WCAG contrast + light-theme regression checks
+node tests/theme-contrast.test.mjs    # 52 WCAG contrast + light-theme regression checks
+node tests/css-layout.test.mjs        # 13 stylesheet-integrity + quiz control layout checks
+node tests/contact-us.test.mjs        # 14 Contact Us + WhatsApp end-to-end checks
 APP_DIR=/path/to/assets node tests/pwa.test.mjs   # test a built bundle (e.g. an APK's assets/)
 ```
 
@@ -461,7 +463,7 @@ spread.
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 592,803 bytes (579 KB),
 `versionCode 4`, `versionName 1.2.0`, minSdk 21 / targetSdk 34, signed
 v1 + v2 + v3 with the same release key (cert SHA-256 `2d7470c4…`),
-MD5 `826106bb9e222fcdd13057023f20477f`.
+MD5 `ab52e2f937356704bbc140dc8d4632d2`.
 
 ### Step 21 — v1.2.1: Discard Quiz and the quiz timer actually work
 
@@ -552,6 +554,57 @@ finished APK.
 
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 596,899 bytes (583 KB),
 `versionCode 6`, `versionName 1.2.2`, minSdk 21 / targetSdk 34, signed
+v1 + v2 + v3 with the same release key.
+
+### Step 23 — v1.3.0: quiz control layout, Contact Us and WhatsApp
+
+**The answer input was hanging out of the card — and it was my fault.** A stray
+`}` at the end of the dark-theme token block I added in v1.2.2 was absorbed
+into the *next* rule's selector, so the browser threw away
+`* { box-sizing: border-box; }`. Every `width: 100%` control then grew by its
+own padding + border: the answer input by 34px (it poked through the right-hand
+edge of the quiz card), and the auth fields, the dialog buttons and the
+Continue Quiz buttons with it. Fixed at the source — the brace is gone and the
+form controls now re-assert `box-sizing: border-box; max-width: 100%` — and
+pinned by a test that parses the stylesheet with a real CSS parser, because the
+symptom is that the rule simply is not there.
+
+**The Submit Answer button was wrapping to two lines.** It shared the top row
+of a two-column grid, so on a phone it was squeezed to half the card (~116px at
+320px wide) and "Submit Answer" broke into "Submit / Answer" — 68px tall
+instead of 46px. The controls are now three clean rows:
+
+```
+[ Answer input .................... ]
+          [ Submit Answer ]
+[   Hint   ]         [   Quit   ]
+```
+
+Submit Answer is centred under the field on its own row, sized by its label
+with `white-space: nowrap` (168 × 46px at every width, a 46px touch target),
+and Hint and Quit sit on one row below, pinned to the card edges at identical
+widths. Nothing uses a hard-coded pixel width.
+
+**A real Contact Us page.** New `#/contact` route with a side-nav entry, three
+cards on the existing design system: the welcome/support text, a developer card
+(photo, **Muhammad Ibrahim** — *Developer of Mental Maths Practice*) and a
+WhatsApp card whose button is a real `<a href="https://wa.me/03485581969?...">`
+- no JavaScript standing in for it. The APK's `WebViewClient` now hands
+outbound http(s) links to the platform, so WhatsApp itself opens the
+conversation with the pre-filled message; if WhatsApp is not installed the
+browser takes it and wa.me falls back to WhatsApp Web. Verified end-to-end in
+Chromium: tapping the button navigates, the number `03485581969` and the exact
+message survive the trip, and nothing calls `preventDefault()`.
+
+**Verification** — 148/148 across eight suites (`pwa` 14, `regressions` 15,
+`quiz-actions` 6, `content-difficulty` 15, `timer-discard` 19,
+`theme-contrast` 52, `css-layout` 13, `contact-us` 14), plus three real-browser
+harnesses run in headless Chromium: 8/8 viewport geometry checks (320 → 1280),
+every contrast pair measured in both themes, and a 30-step end-to-end journey.
+All of it was re-run against the `assets/` extracted from the finished APK.
+
+**Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 625,641 bytes (612 KB),
+`versionCode 7`, `versionName 1.3.0`, minSdk 21 / targetSdk 34, signed
 v1 + v2 + v3 with the same release key.
 
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 519,003 bytes (507 KB),

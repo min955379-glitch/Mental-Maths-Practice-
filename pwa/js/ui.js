@@ -414,6 +414,21 @@
     loginForm.addEventListener('submit', async (e) => { e.preventDefault(); loginMsg.textContent = ''; const fd = new FormData(loginForm); const res = await window.Auth.login({ email:fd.get('email'), password:fd.get('password') }); if(res.ok) { showToast('Welcome back', 'success'); location.hash = '#/dashboard'; route('/dashboard'); } else { loginMsg.textContent = res.msg; } });
     registerForm.addEventListener('submit', async (e) => { e.preventDefault(); registerMsg.textContent = ''; const fd = new FormData(registerForm); if(fd.get('password') !== fd.get('confirm')) { registerMsg.textContent = 'Passwords do not match.'; return; } const res = await window.Auth.register({ name:fd.get('name'), email:fd.get('email'), password:fd.get('password') }); if(res.ok) { showToast('Account created', 'success'); location.hash = '#/dashboard'; route('/dashboard'); } else { registerMsg.textContent = res.msg; } });
   }
+  // Contact Us is static content, so the only thing the renderer has to do is
+  // stamp the shared WhatsApp glyph into the two places that show it. The
+  // button itself is a real link to the real wa.me URL - there is no
+  // JavaScript click handler standing in for it.
+  function renderContact(main) {
+    const tpl = document.getElementById('tpl-contact');
+    if (!tpl) return;
+    main.appendChild(tpl.content.cloneNode(true));
+    const icon = (window.Icons && window.Icons.whatsapp) || '';
+    const chip = document.getElementById('waIcon');
+    const btnIcon = document.getElementById('waBtnIcon');
+    if (chip) chip.innerHTML = icon;
+    if (btnIcon) btnIcon.innerHTML = icon;
+  }
+
   function renderAccount(main) { const u = StateStore.getUser(); if(!u) { location.hash = '#/auth'; route('/auth'); return; } const tpl = document.getElementById('tpl-account'); main.appendChild(tpl.content.cloneNode(true)); const acc = window.Auth.getAccountDetails(); const t = Stats.totals(); document.getElementById('accName').textContent = acc.name; document.getElementById('accEmail').textContent = acc.email; document.getElementById('accSince').textContent = new Date(acc.since || acc.createdAt || Date.now()).toLocaleDateString(); document.getElementById('accSolved').textContent = t.total; document.getElementById('accAccuracy').textContent = t.total ? t.accuracy + '%' : '-'; document.getElementById('logoutBtn').addEventListener('click', () => { window.Auth.logout(); showToast('Signed out'); location.hash = '#/dashboard'; route('/dashboard'); }); }
 
   // -- Quiz screen ---------------------------------------------------------
@@ -710,7 +725,8 @@
     else if (path === '/auth') renderAuth(main);
     else if (path === '/account') renderAccount(main);
     else if (path === '/categories') renderCategories(main);
+    else if (path === '/contact') renderContact(main);
     else renderLanding(main);
   }
-  window.UI = { route, applyTheme, applyMotionPref, showToast, confirmDialog, closeConfirm, startQuiz, resumeQuiz, renderResult, renderContinueQuiz, renderSetup };
+  window.UI = { route, applyTheme, applyMotionPref, showToast, confirmDialog, closeConfirm, startQuiz, resumeQuiz, renderResult, renderContinueQuiz, renderSetup, renderContact };
 })();
