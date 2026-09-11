@@ -127,8 +127,9 @@ button { font: inherit; }
 .brand-mark {
   width: 34px; height: 34px; border-radius: 9px;
   display: grid; place-items: center;
-  background: linear-gradient(135deg, var(--c-navy-800), var(--c-indigo-600));
-  color: #fff; box-shadow: var(--shadow-sm);
+  /* Flat indigo tile, matching the app logo (no gradient, no 3D shading). */
+  background: var(--c-indigo-600);
+  color: #fff;
 }
 .brand-text { display: flex; flex-direction: column; line-height: 1.05; }
 .brand-title { font-weight: 800; font-size: 13px; letter-spacing: 0.06em; color: var(--c-text-muted); text-transform: uppercase; }
@@ -214,6 +215,64 @@ input::placeholder, textarea::placeholder { color: var(--c-text-soft); opacity: 
 label > input, label > select { margin-top: 4px; }
 input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--c-indigo-600); cursor: pointer; }
 .search-input { max-width: 280px; }
+
+/* ---------------------------------------------------------------------------
+   Custom dropdown (Settings page)
+   The native <select> stays in the form and keeps its value - this is only the
+   visible layer on top of it, so nothing about saving changes. Every colour is
+   a design token, so the menu follows the theme instead of showing the
+   device's white picker.
+   --------------------------------------------------------------------------- */
+.select { position: relative; width: 100%; min-width: 0; }
+/* The real control: kept for its value and for form submission, hidden from
+   sight, from pointers and from assistive tech (the listbox below is what a
+   screen reader and a keyboard user get instead). */
+.select-native {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  margin: 0; padding: 0; border: 0; opacity: 0; pointer-events: none;
+  -webkit-appearance: none; appearance: none;
+}
+.select-trigger {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 44px; padding: 10px 14px;
+  text-align: left; font: inherit; font-size: 15px; cursor: pointer;
+  background: var(--c-surface); color: var(--c-text);
+  border: 1px solid var(--c-border-strong); border-radius: var(--radius-md);
+  transition: border-color 120ms, background 120ms, box-shadow 120ms;
+}
+.select-trigger:hover { background: var(--c-surface-2); border-color: var(--c-indigo-500); }
+.select-trigger:focus-visible { outline: 2px solid var(--c-indigo-500); outline-offset: 2px; }
+.select-value { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.select-arrow { flex: 0 0 18px; width: 18px; height: 18px; color: var(--c-text-muted); transition: transform 160ms ease; }
+.select.is-open .select-arrow { transform: rotate(180deg); }
+.select-menu {
+  position: absolute; z-index: 60; left: 0; right: 0; top: calc(100% + 6px);
+  margin: 0; padding: 6px; list-style: none;
+  background: var(--c-surface-2); border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+  max-height: min(320px, 60vh); overflow-y: auto; overscroll-behavior: contain;
+  opacity: 0; transform: translateY(-4px) scale(0.985);
+  transform-origin: top center; pointer-events: none;
+  transition: opacity 130ms ease, transform 130ms ease;
+}
+.select.is-open .select-menu { opacity: 1; transform: none; pointer-events: auto; }
+/* Flip upwards when there is not enough room below. */
+.select--up .select-menu { top: auto; bottom: calc(100% + 6px); transform-origin: bottom center; }
+.select-option {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 44px; padding: 8px 12px; border-radius: var(--radius-sm);
+  color: var(--c-text); font-size: 15px; line-height: 1.35; cursor: pointer;
+  transition: background 90ms, color 90ms;
+}
+.select-option + .select-option { border-top: 1px solid var(--c-border-strong); }
+.select-option-text { flex: 1 1 auto; min-width: 0; }
+.select-check {
+  flex: 0 0 18px; width: 18px; height: 18px; margin-left: 8px;
+  color: var(--c-on-chip); opacity: 0; transition: opacity 120ms ease;
+}
+.select-option:hover, .select-option.is-active { background: var(--c-indigo-100); color: var(--c-on-chip); }
+.select-option.is-selected { color: var(--c-on-chip); font-weight: 600; }
+.select-option.is-selected .select-check { opacity: 1; }
 .landing { padding: 30px 0 20px; }
 .landing-grid { display: grid; gap: 40px; grid-template-columns: 1fr; align-items: center; }
 @media (min-width: 900px) { .landing-grid { grid-template-columns: 1.1fr 1fr; gap: 60px; } }

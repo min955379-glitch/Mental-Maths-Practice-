@@ -2,9 +2,9 @@
 
 **App:** Mental Maths Practice (ISCSP exam preparation)
 **Repo:** [min955379-glitch/Mental-Maths-Practice-](https://github.com/min955379-glitch/Mental-Maths-Practice-)
-**Latest release:** **v1.3.0** (2026-09-11) — `apk/Mental-Maths-Practice.apk`, 612 KB, signed v1+v2+v3
-**Package:** `com.iscsp.mentalmatharena` (versionCode 7) · **PWA cache:** `iscsp-mm-v10`
-**Last reviewed:** v1.3.0 — the stray-brace bug that killed `box-sizing` is fixed, the quiz controls are re-laid-out, and Contact Us + WhatsApp are live
+**Latest release:** **v1.4.0** (2026-09-11) — `apk/Mental-Maths-Practice.apk`, 227 KB, signed v1+v2+v3
+**Package:** `com.iscsp.mentalmatharena` (versionCode 8) · **PWA cache:** `iscsp-mm-v11`
+**Last reviewed:** v1.4.0 — the Settings dropdowns are now drawn by the app in the active theme (no more device picker) and the logo is a flat, text-free SVG
 
 ---
 
@@ -13,7 +13,7 @@
 | Path | Status | What it is |
 |---|---|---|
 | `pwa/` | **ACTIVE / shipping** | The app itself: self-contained progressive web app — no build step, no backend, works offline, installable, and bundled into the Android APK. **All new features land here.** |
-| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.3.0, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
+| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.4.0, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
 | `apk/build.sh` | ACTIVE | Gradle rebuild: syncs `pwa/` → assets, `gradle assembleRelease`, signs with `release.keystore`. |
 | `apk/build-offline.sh` | ACTIVE | Gradle-free rebuild straight from the SDK tools (aapt2 → javac → d8 → zipalign → apksigner). This is how v1.1.0 was produced. |
 | `tools/question_bank/` | ACTIVE | Deterministic Python bank generator: 345 question families → 1,080 machine-verified questions across 18 categories (see `VALIDATION.md`). |
@@ -243,6 +243,46 @@ finished APK.
 
 ---
 
+### 1.13 v1.4.0 — custom Settings dropdown + flat logo (2026-09-11)
+
+**Settings dropdown — the device picker is gone**
+- [x] New reusable component `pwa/js/select.js` (`window.AppSelect`): wraps any
+      `<select>` in a combobox button + listbox. The native select stays in the
+      form, keeps its id/value and stays the single source of truth, so
+      `renderSettings()`, the submit handler and `StateStore` are untouched.
+- [x] Device picker unreachable: the native select is `opacity: 0`,
+      `pointer-events: none`, `tabindex="-1"`, `aria-hidden="true"`.
+- [x] Accessibility: `role="combobox"` + `aria-haspopup` / `aria-expanded` /
+      `aria-controls`, `role="listbox"`, `role="option"` with `aria-selected`,
+      `aria-activedescendant` while moving, accessible name taken from the
+      row's own `<label>`; Escape, outside tap and Tab all close it.
+- [x] Keyboard: Enter/Space/arrows open, arrows move, Home/End jump,
+      Enter/Space select. Enter no longer re-opens the menu it just closed.
+- [x] Selecting saves that one setting through `StateStore` and re-applies the
+      theme immediately (Light/Dark/Auto switch at once; all five difficulties
+      round-trip); the quiz still honours the saved default difficulty.
+- [x] Styled with the existing tokens only — 44px touch targets, the app's
+      radii/border/shadow, a ticked + tinted selected row instead of the
+      device's radio circles, no emoji, no new dependency.
+- [x] Menu flips above the field when there is no room below and shrinks to
+      fit; nothing overflows from 320px to 1280px.
+- [x] Contrast measured in both themes: value 13.90:1 / 16.24:1, arrow
+      9.52:1 / 5.53:1, selected row 9.16:1 / 7.90:1 (dark / light).
+
+**Logo**
+- [x] `pwa/icons/icon.svg` rebuilt as a flat, minimalist, text-free mark: one
+      indigo tile + one continuous check stroke, two colours, no gradient.
+- [x] `tools/render-icons.py` regenerates every PNG from that SVG: PWA
+      `icon-192` / `icon-512` / `icon-maskable` (artwork inside the 80% safe
+      zone) and the Android launcher set (check inside the 66dp safe circle,
+      adaptive background now indigo).
+- [x] Header brand mark flattened to match; service worker bumped to
+      `iscsp-mm-v11` with `js/select.js` precached.
+
+**Verification** — 174/174 across nine suites (new `select-component`, 26)
+plus four headless-Chromium harnesses (new `dropdown_check.py`, 45/45) —
+every one re-run against the assets extracted from the signed APK.
+
 ## 2. In progress / next up
 
 | # | Item | Why it matters | Where |
@@ -291,6 +331,7 @@ finished APK.
 
 | Version | Date | Highlights | File |
 |---|---|---|---|
+| **v1.4.0** | 2026-09-11 | Settings dropdowns are now drawn by the app (reusable `AppSelect` combobox + listbox, keyboard/Escape/outside-tap, 44px rows, ticked selected row, flips up when space is tight) instead of the device's own picker, saving through the existing store; logo rebuilt as a flat text-free SVG with all launcher art regenerated (APK 612 KB → 227 KB); 26 new unit tests + a 45-check browser harness | `apk/Mental-Maths-Practice.apk` |
 | **v1.3.0** | 2026-09-11 | Quiz answer input back inside the card (a stray brace had silently deleted the universal `box-sizing: border-box` rule); Submit Answer compact, centred and on one line; Hint/Quit on one aligned row; new Contact Us page with the developer profile and a real WhatsApp button (03485581969, exact pre-filled message, opens WhatsApp with browser fallback); 30 new tests + 3 real-browser harnesses | `apk/Mental-Maths-Practice.apk` |
 | **v1.2.2** | 2026-09-11 | Discard Quiz root cause: the offline service worker was serving stale JS (cache bumped to v9) and the delete is now verified with a fallback match, live re-render and user feedback; dark theme rebuilt on measured WCAG contrast (icons 1.4:1 → 9.2:1) with the light theme untouched; 68 new tests | `apk/Mental-Maths-Practice.apk` |
 | **v1.2.1** | 2026-09-11 | Discard Quiz really deletes the selected unfinished quiz (id-safe, persisted, live dashboard refresh, gone after reload) and the quiz timer works in every mode on a monotonic timestamp clock (runs across questions, resumes correctly, countdowns still finish the quiz); 15 new timer/discard tests | `apk/Mental-Maths-Practice.apk` |

@@ -1,3 +1,38 @@
+# Release notes
+
+## v1.4.0 — Custom Settings dropdown + new logo
+
+**File:** `apk/Mental-Maths-Practice.apk` (227 KB / 232,490 bytes, versionCode 8, versionName 1.4.0)
+**MD5:** `8cb49564362a77b577517efe86c174d5`
+**SHA-256:** `1e3b8052f8f9b9a8c9ad86e1334b67cbf6a11e3178bc7007ee786a67b60b43fa`
+**Signed:** v1 + v2 + v3 with the same release key (signer MD5 `efaba7267a95c337ecfaa8b4cb2241c0`), so this installs as an update over v1.3.0 and keeps your data.
+**Requires:** Android 5.0 (API 21)+
+
+### What changed
+- **Settings dropdowns are now drawn by the app.** Theme and Default difficulty
+  no longer open the device's own picker. The new menu is a themed panel with
+  44px rows and a ticked selected row; it opens on tap, closes on Escape, on a
+  tap outside or on Tab, and supports arrows / Home / End / Enter.
+- **Nothing about how settings are stored changed.** The native `<select>` is
+  still in the form and still holds the value; picking an option saves that one
+  setting through the same store, so Light / Dark / Auto switch immediately and
+  all five difficulties still round-trip and still drive new quizzes.
+- **New logo.** A flat, minimalist, text-free SVG (one indigo tile, one check
+  stroke — no gradient, no 3D shading). All launcher art was regenerated from
+  it: PWA icons 192 / 512 / maskable and the Android launcher icons.
+- **Smaller install:** 227 KB instead of 612 KB (the old launcher PNGs alone
+  were ~395 KB of the package).
+
+### Verified
+174/174 unit tests (nine suites, including a new 26-test dropdown suite) and
+four headless-Chromium harnesses — a new 45-check dropdown harness (both menus,
+all 3 themes, all 5 difficulties, keyboard, contrast in both themes, 320 → 1280
+geometry, flip-up), a 30-step end-to-end journey, 8/8 viewport geometry and
+every contrast pair in both themes. All re-run against the `assets/` extracted
+from this signed APK.
+
+---
+
 # Release Notes
 
 ## v1.3.0 — Quiz control layout + Contact Us with WhatsApp

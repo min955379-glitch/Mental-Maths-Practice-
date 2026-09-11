@@ -141,11 +141,11 @@
     <section class="screen">
       <div class="screen-head"><div><p class="eyebrow">App</p><h1 class="screen-title">Settings</h1></div></div>
       <form id="settingsForm" class="settings-form card">
-        <div class="setting-row"><label for="setTheme">Theme</label><select id="setTheme"><option value="light">Light</option><option value="dark">Dark</option><option value="auto">Auto (system)</option></select></div>
+        <div class="setting-row"><label for="setTheme">Theme</label><select id="setTheme" data-setting="theme"><option value="light">Light</option><option value="dark">Dark</option><option value="auto">Auto (system)</option></select></div>
         <div class="setting-row"><label for="setSound">Sound effects</label><input type="checkbox" id="setSound" /></div>
         <div class="setting-row"><label for="setTimer">Show timer during practice</label><input type="checkbox" id="setTimer" /></div>
         <div class="setting-row"><label for="setHint">Allow hints in practice mode</label><input type="checkbox" id="setHint" /></div>
-        <div class="setting-row"><label for="setDifficulty">Default difficulty</label><select id="setDifficulty"><option>Easy</option><option>Medium</option><option>Hard</option><option>Expert</option><option>Mixed</option></select></div>
+        <div class="setting-row"><label for="setDifficulty">Default difficulty</label><select id="setDifficulty" data-setting="difficulty"><option>Easy</option><option>Medium</option><option>Hard</option><option>Expert</option><option>Mixed</option></select></div>
         <div class="setting-row"><label for="setCount">Default number of questions</label><input type="number" id="setCount" min="5" max="100" step="1" /></div>
         <div class="setting-row"><label for="setGoal">Daily practice goal (questions)</label><input type="number" id="setGoal" min="5" max="500" step="1" /></div>
         <div class="setting-row"><label for="setMotion">Reduce motion</label><input type="checkbox" id="setMotion" /></div>
@@ -401,6 +401,7 @@
   <script src="js/stats.js"></script>
   <script src="js/coach.js"></script>
   <script src="js/patterns.js"></script>
+  <script src="js/select.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/app.js"></script>
 </body>

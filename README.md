@@ -3,9 +3,9 @@
 A complete, polished, production-quality mental-math training platform for
 ISCSP exam preparation.
 
-> **Latest release — v1.3.0 (2026-09-11).** Signed Android APK:
+> **Latest release — v1.4.0 (2026-09-11).** Signed Android APK:
 > [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 583 KB,
-> versionCode 7, signed with the release key (v1 + v2 + v3 verified). It
+> versionCode 8, signed with the release key (v1 + v2 + v3 verified). It
 > installs as an in-place update over earlier builds and keeps your progress.
 > **v1.2.0 is the content + difficulty release:** **1,130 original questions**
 > across all 18 categories (50+ per category, split Easy / Medium / Hard by
@@ -24,7 +24,7 @@ ISCSP exam preparation.
 ```
 .
 ├── apk/
-│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.3.0 (612 KB)
+│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.4.0 (227 KB)
 │   ├── app/                          # Android project (Java + WebView wrapper)
 │   │   └── src/main/assets/          # PWA bundled inside the APK (file:///android_asset/)
 │   ├── gradle/wrapper/               # Gradle wrapper
@@ -73,11 +73,11 @@ With a computer and USB debugging enabled: `adb install -r Mental-Maths-Practice
 | What | Value |
 |---|---|
 | Package | `com.iscsp.mentalmatharena` |
-| Version | versionCode 7 · versionName 1.3.0 |
-| Size | 612 KB (625,641 bytes) |
+| Version | versionCode 8 · versionName 1.4.0 |
+| Size | 227 KB (232,490 bytes) |
 | Min / target SDK | 21 (Android 5.0) / 34 (Android 14) |
 | Signature | v1 + v2 + v3, release key SHA-256 `2d7470c4a5239d5d…` |
-| MD5 | `ab52e2f937356704bbc140dc8d4632d2` |
+| MD5 | `8cb49564362a77b577517efe86c174d5` |
 
 ## Live progress log
 
@@ -463,7 +463,7 @@ spread.
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 592,803 bytes (579 KB),
 `versionCode 4`, `versionName 1.2.0`, minSdk 21 / targetSdk 34, signed
 v1 + v2 + v3 with the same release key (cert SHA-256 `2d7470c4…`),
-MD5 `ab52e2f937356704bbc140dc8d4632d2`.
+MD5 `8cb49564362a77b577517efe86c174d5`.
 
 ### Step 21 — v1.2.1: Discard Quiz and the quiz timer actually work
 
@@ -613,6 +613,68 @@ v1 + v2 + v3 with the same release key, MD5 `6605300584c4777f3305ce90bde6a0d9`.
 `apk/build-offline.sh` now reads `versionCode` / `versionName` from
 `app/build.gradle`, so there is a single source of truth for the version.
 
+
+### Step 24 — v1.4.0: the Settings dropdown is drawn by the app, and a flat logo
+
+**Settings was handing its two selects to the operating system.** Both rows
+were plain `<select>` elements, so the *device* drew the menu: on Android a
+full-screen popup that ignored the app's theme, on iOS the unstyled wheel. It
+could not be styled, it did not follow dark mode, and the option list was not
+the app's to design. The value handling was fine — the complaint is purely how
+it looked and felt — so the fix is presentation only: **the native `<select>`
+stays in the form, keeps its id and keeps its value, and every existing save
+path still reads it.** `renderSettings()`, the form's submit handler,
+`StateStore` and the quiz's default difficulty were not modified.
+
+**A reusable component (`pwa/js/select.js`), not a Settings one-off.** It wraps
+any `<select>` with a combobox button plus a listbox:
+
+| | |
+|---|---|
+| Semantics | `role="combobox"` + `aria-haspopup`/`aria-expanded`/`aria-controls`, `role="listbox"`, `role="option"` with `aria-selected` and `aria-activedescendant`; the native select is `tabindex="-1"` + `aria-hidden` and cannot be clicked (`pointer-events: none`), so the device picker can no longer be reached |
+| Keyboard | Enter/Space/↓/↑ open, arrows move, Home/End jump, Enter/Space select, Escape closes, Tab closes |
+| Pointer | tap to open, tap an option to choose, tap outside to close; only one dropdown open at a time |
+| Save path | picking writes the value back into the native `<select>`, then saves that one setting through `StateStore` and re-applies the theme — Light/Dark/Auto switch instantly, and all five difficulties round-trip |
+| Motion | 130ms fade + slight scale and a rotating arrow, all switched off by the app's existing reduced-motion preference |
+
+**The menu is the app's own design in the active theme** — 44px rows, the
+existing radii, borders, shadow and type scale, full width of the field, and a
+ticked, tinted selected row instead of the device's radio circles. No emoji, no
+new dependencies, no new library. When the field is near the bottom of the
+screen the menu flips above it and shrinks to fit.
+
+**Measured, not eyeballed** (real Chromium, WebView-class engine):
+
+| | dark theme | light theme |
+|---|---|---|
+| Field value | 13.90:1 | 16.24:1 |
+| Arrow | 9.52:1 | 5.53:1 |
+| Option label | 13.90:1 | 16.24:1 |
+| Selected row (label + tick) | 9.16:1 | 7.90:1 |
+| Menu border / panel against the card | 3.43:1 / 1.15:1 | 1.51:1 / 1.05:1 |
+
+**A new logo.** The old mark was a gradient tile with a check and two light
+"lines" — 3D-ish, and 139 KB of launcher PNG on its own. It is now a flat SVG:
+one indigo tile and one continuous check stroke, two colours, **no text, no
+gradient, no shading**. `tools/render-icons.py` re-renders every PNG from that
+single SVG — `icon-192`, `icon-512`, `icon-maskable` (artwork inside the 80%
+safe zone) and the Android launcher set (check inside the 66dp safe circle,
+indigo adaptive background) — and the header brand mark was flattened to match.
+Side effect: **the installable APK went from 612 KB to 227 KB.**
+
+**Verification** — 174/174 across nine suites (`pwa` 14, `regressions` 15,
+`quiz-actions` 6, `content-difficulty` 15, `timer-discard` 19,
+`theme-contrast` 52, `css-layout` 13, `contact-us` 14, **new
+`select-component` 26**), plus four headless-Chromium harnesses: **new
+`dropdown_check.py` 45/45** (both dropdowns open/close, all 3 themes and all 5
+difficulties, keyboard, selected indicator, contrast in both themes, 320 → 1280
+geometry, flip-up), 30/30 end-to-end journey, 8/8 viewport geometry, and every
+contrast pair in both themes. All re-run against the `assets/` extracted from
+the finished APK.
+
+**Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 232,490 bytes (227 KB),
+`versionCode 8`, `versionName 1.4.0`, minSdk 21 / targetSdk 34, signed
+v1 + v2 + v3 with the same release key, MD5 `8cb49564362a77b577517efe86c174d5`.
 
 ## How to run the PWA locally
 

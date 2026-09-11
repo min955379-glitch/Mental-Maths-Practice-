@@ -1,9 +1,9 @@
-const CACHE = 'iscsp-mm-v10';
+const CACHE = 'iscsp-mm-v11';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './css/styles.css',
   './js/icons.js','./js/data.js','./js/question-bank.js','./js/generator.js','./js/normalize.js',
   './js/state.js','./js/auth.js','./js/hints.js','./js/quiz.js','./js/stats.js',
-  './js/coach.js','./js/patterns.js','./js/ui.js','./js/app.js',
+  './js/coach.js','./js/patterns.js','./js/select.js','./js/ui.js','./js/app.js',
   './icons/icon.svg', './img/developer.jpg'
 ];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });

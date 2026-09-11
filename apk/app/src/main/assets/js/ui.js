@@ -382,6 +382,10 @@
     document.getElementById('setTimer').checked = !!s.timerInPractice; document.getElementById('setHint').checked = !!s.hintMode;
     document.getElementById('setDifficulty').value = s.difficulty; document.getElementById('setCount').value = s.defaultCount;
     document.getElementById('setGoal').value = s.dailyGoal; document.getElementById('setMotion').checked = !!s.reducedMotion;
+    // Upgrade the native <select>s to the custom dropdown once their values are
+    // in place (the select itself stays the source of truth, so everything
+    // below - and the save handler - keeps reading it exactly as before).
+    if (window.AppSelect) window.AppSelect.enhanceAll(main);
     document.getElementById('settingsForm').addEventListener('submit', (e) => {
       e.preventDefault();
       StateStore.setSettings({ theme:document.getElementById('setTheme').value, sound:document.getElementById('setSound').checked, timerInPractice:document.getElementById('setTimer').checked, hintMode:document.getElementById('setHint').checked, difficulty:document.getElementById('setDifficulty').value, defaultCount:parseInt(document.getElementById('setCount').value,10)||10, dailyGoal:parseInt(document.getElementById('setGoal').value,10)||20, reducedMotion:document.getElementById('setMotion').checked });
