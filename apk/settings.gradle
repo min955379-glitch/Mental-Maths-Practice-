@@ -5,5 +5,5 @@ pluginManagement {
         mavenCentral()
     }
 }
-rootProject.name = "ISCSPMentalMathArena"
+rootProject.name = "MentalMathsPractice"
 include ':app'

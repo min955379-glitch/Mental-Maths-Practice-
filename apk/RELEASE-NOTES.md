@@ -4,7 +4,7 @@
 
 **Release date:** 2026-09-11
 **File:** `apk/Mental-Maths-Practice.apk` (579 KB / 592,803 bytes, versionCode 4, versionName 1.2.0)
-**MD5:** `d613929410a06666815eb4c744023766`
+**MD5:** `10f74510567122be80501c6aca04ae5e`
 **Signed with the original release key** (SHA-256 `2d7470c4a5239d5df72090f5b0329b99efd394a305c54464b2800cb1ae129d43`), verified v1 + v2 + v3 →
 installs as an in-place update over v1.1.1 and keeps every stat, session and unfinished quiz.
 
@@ -48,6 +48,19 @@ installs as an in-place update over v1.1.1 and keeps every stat, session and unf
   from 320 px up.
 - **Quit now uses an in-app modal** instead of the browser `confirm()`. Cancel keeps
   you in the quiz; Quit saves progress and **Continue Quiz** resumes it.
+
+### Engineering
+
+- New dependency-free **policy gate** (`tools/check-policy.mjs`) in CI: no emoji,
+  no native `confirm()` / `alert()` / `prompt()` (the app now declines instead of
+  falling back to a native dialog), no remote resources, `× ÷ −` typography,
+  hints that teach without revealing the answer.
+- `.github/workflows/ci.yml` runs all four suites, the bank census and a
+  bank-reproducibility check on every push; `.github/workflows/pages.yml`
+  publishes the PWA to GitHub Pages.
+- The Gradle path (`apk/build.sh`) now writes `Mental-Maths-Practice.apk` like
+  the Gradle-free path, and the superseded 4.8 MB `ISCSP-Mental-Math-Arena.apk`
+  has been deleted.
 
 ### Verification
 

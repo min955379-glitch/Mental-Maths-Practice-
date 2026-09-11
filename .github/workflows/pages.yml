@@ -1,0 +1,40 @@
+name: Deploy PWA to GitHub Pages
+
+# Gives the app a hosted URL so it can be installed with "Add to Home Screen"
+# without the APK. The service worker makes it work offline once installed.
+#
+# One-time setup: repository Settings -> Pages -> Source: "GitHub Actions".
+# No secrets are needed - GITHUB_TOKEN is used with the permissions below.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - name: Upload the PWA
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pwa
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

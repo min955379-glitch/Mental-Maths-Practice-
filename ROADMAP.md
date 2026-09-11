@@ -148,8 +148,8 @@ finished APK**.
 | # | Item | Why it matters | Where |
 |---|---|---|---|
 | 0 | **Password hashing** | Local accounts use salted SHA-256, which is brute-force friendly. With no server the risk is limited (a lost device), but PBKDF2/scrypt via WebCrypto is the right primitive when sync lands | `pwa/js/auth.js` |
-| 1 | **Stale naming sweep** | "ISCSP Mental Math AI Arena" still lives in `frontend/index.html`, backend log strings, the Gradle project name and the old `ISCSP-Mental-Math-Arena.apk` | `frontend/`, `backend/`, `apk/` |
-| 2 | **GitHub Pages deploy** | The Pages workflow was added in `de071b7`, then removed in `0c3e1bf`. Without a hosted URL there is no "Add to Home Screen" install path for people who don't want the APK | `.github/` |
+| 1 | **Stale naming sweep** | Mostly **done in v1.2.0**: `apk/build.sh` now writes `Mental-Maths-Practice.apk`, the Gradle project is `MentalMathsPractice`, and the superseded 4.8 MB `ISCSP-Mental-Math-Arena.apk` is deleted. Remaining: the preserved legacy `frontend/` and `backend/` trees and backend log strings | `frontend/`, `backend/` |
+| 2 | ~~**GitHub Pages deploy**~~ | **Done in v1.2.0** — `.github/workflows/pages.yml` deploys `pwa/` on every push to `main` using `GITHUB_TOKEN` (no secrets); enable Pages → Source: *GitHub Actions* once to activate | `.github/` |
 | 3 | ~~**CI**~~ | **Done in v1.2.0** — `.github/workflows/ci.yml` runs `node --check` on every app script, a question-bank census, all four JSDOM suites and a bank-reproducibility check on every push/PR, and builds + signs the APK on `v*` tags. Remaining gap: no linter/typecheck is configured (vanilla JS, no toolchain chosen yet) | `.github/workflows/` |
 | 4 | **Keep the two build paths in step** | `build-offline.sh` now reads `versionCode` / `versionName` from `app/build.gradle`, so there is one source of truth; `build.sh` (Gradle) still needs the same treatment plus a CI check that both agree | `apk/` |
 
@@ -180,7 +180,8 @@ finished APK**.
 
 ### Engineering quality
 - [ ] Semantic versioning discipline across `manifest.webmanifest`, `build.gradle` and the service worker cache (`build.gradle` is now the single source of truth read by `build-offline.sh`)
-- [ ] Linter / typecheck step in CI (currently only `node --check` syntax gating)
+- [x] ~~Linter / typecheck step in CI~~ — **done in v1.2.0** as the dependency-free policy gate `tools/check-policy.mjs` (emoji, native dialogs, remote resources, maths typography, hint safety, service-worker precache) plus `node --check`
+- [ ] A real linter/type checker (ESLint / TypeScript) if the app ever grows past vanilla JS
 - [ ] Lighthouse audit (performance + a11y) on the PWA
 - [ ] Automated APK smoke test (install on an emulator and walk one quiz)
 

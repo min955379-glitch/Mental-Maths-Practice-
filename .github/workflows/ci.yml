@@ -47,6 +47,9 @@ jobs:
             if (!ok) { console.error("bank census FAILED"); process.exit(1); }
           '
 
+      - name: Policy gate (no emoji, no native dialogs, no remote resources)
+        run: node tools/check-policy.mjs
+
       - name: Run the suites
         env:
           TZ: Asia/Karachi

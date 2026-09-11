@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the ISCSP Mental Math AI Arena Android APK.
+# Build the Mental Maths Practice Android APK.
 # Prerequisites: JDK 17, Android SDK with platform-34 + build-tools 34.0.0.
 #
 # Before running this script:
@@ -67,17 +67,17 @@ if [ -f "release.keystore" ]; then
     apksigner sign --ks release.keystore --ks-pass env:KS_PASS --key-pass env:KS_PASS \
       --ks-key-alias "$KS_ALIAS" \
       --out "$APK_PATH.signed.apk" "$APK_PATH"
-    cp "$APK_PATH.signed.apk" ISCSP-Mental-Math-Arena.apk
-    echo "Signed APK: ISCSP-Mental-Math-Arena.apk ($(du -sh ISCSP-Mental-Math-Arena.apk | cut -f1))"
+    cp "$APK_PATH.signed.apk" Mental-Maths-Practice.apk
+    echo "Signed APK: Mental-Maths-Practice.apk ($(du -sh Mental-Maths-Practice.apk | cut -f1))"
   else
-    cp "$APK_PATH" ISCSP-Mental-Math-Arena.apk
-    echo "Built (unsigned, apksigner not found): ISCSP-Mental-Math-Arena.apk"
+    cp "$APK_PATH" Mental-Maths-Practice.apk
+    echo "Built (unsigned, apksigner not found): Mental-Maths-Practice.apk"
   fi
 else
-  cp "$APK_PATH" ISCSP-Mental-Math-Arena.apk
-  echo "Built (unsigned, no keystore): ISCSP-Mental-Math-Arena.apk"
+  cp "$APK_PATH" Mental-Maths-Practice.apk
+  echo "Built (unsigned, no keystore): Mental-Maths-Practice.apk"
 fi
 
 echo ""
 echo "Done. Install on your phone with:"
-echo "  adb install ISCSP-Mental-Math-Arena.apk"
+echo "  adb install Mental-Maths-Practice.apk"

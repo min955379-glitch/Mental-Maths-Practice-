@@ -27,7 +27,13 @@
   function confirmDialog(opts) {
     opts = opts || {};
     const modal = document.getElementById('confirmModal');
-    if (!modal) return Promise.resolve(!!window.confirm(opts.message || 'Are you sure?'));
+    // No modal in the DOM: never fall back to the native confirm() (it is
+    // blocked inside the app's WebView and breaks the design system). Decline
+    // instead - every caller treats false as "stay where you are".
+    if (!modal) {
+      console.warn('confirmDialog: #confirmModal is missing; declining', opts.message || '');
+      return Promise.resolve(false);
+    }
     if (!confirmWired) {
       confirmWired = true;
       document.getElementById('confirmOk').addEventListener('click', () => closeConfirm(true));

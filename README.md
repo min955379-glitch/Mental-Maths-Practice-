@@ -77,7 +77,7 @@ With a computer and USB debugging enabled: `adb install -r Mental-Maths-Practice
 | Size | 579 KB (592,803 bytes) |
 | Min / target SDK | 21 (Android 5.0) / 34 (Android 14) |
 | Signature | v1 + v2 + v3, release key SHA-256 `2d7470c4a5239d5d…` |
-| MD5 | `d613929410a06666815eb4c744023766` |
+| MD5 | `10f74510567122be80501c6aca04ae5e` |
 
 ## Live progress log
 
@@ -301,6 +301,17 @@ suites (plus a syntax check on every app script, a question-bank census and a
 check that `tools/question_bank/build.py` reproduces the committed bank byte for
 byte) and builds + signs the APK on `v*` tags.
 
+A dependency-free **policy gate** (`node tools/check-policy.mjs`) runs alongside
+them and fails the build on: emoji anywhere in the shipped app, a native
+`confirm()` / `alert()` / `prompt()` (the in-app modal is the only confirmation),
+any remote resource (the app must stay offline-first), `*` instead of `×` in a
+question, a hint under 25 characters, a hint that reveals the answer, or a
+service worker that does not precache the question bank.
+
+`.github/workflows/pages.yml` deploys `pwa/` to GitHub Pages on every push to
+`main` (enable Pages → Source: *GitHub Actions* once) so the app can also be
+installed with "Add to Home Screen" without the APK.
+
 ```bash
 node tests/pwa.test.mjs              # 14 end-to-end scenarios
 node tests/regressions.test.mjs      # 15 regression scenarios for the bugs in BUGS.md
@@ -448,7 +459,7 @@ spread.
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 592,803 bytes (579 KB),
 `versionCode 4`, `versionName 1.2.0`, minSdk 21 / targetSdk 34, signed
 v1 + v2 + v3 with the same release key (cert SHA-256 `2d7470c4…`),
-MD5 `d613929410a06666815eb4c744023766`.
+MD5 `10f74510567122be80501c6aca04ae5e`.
 
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 519,003 bytes (507 KB),
 `versionCode 3`, `versionName 1.1.1`, minSdk 21 / targetSdk 34, signed
