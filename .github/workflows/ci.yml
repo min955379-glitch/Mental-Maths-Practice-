@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+# Everything here needs no secrets: the tests run against the committed
+# sources, and the APK job signs with the demo keystore that ships in apk/
+# (override KS_PASS / KS_ALIAS with repository secrets for a real release).
+
+jobs:
+  pwa:
+    name: PWA suites
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install jsdom
+        run: npm install --no-save jsdom
+
+      - name: Syntax check every app script
+        run: |
+          for f in pwa/js/*.js pwa/sw.js; do node --check "$f"; done
+
+      - name: Question bank census
+        run: |
+          node -e '
+            const fs = require("fs");
+            global.window = {};
+            eval(fs.readFileSync("pwa/js/question-bank.js", "utf8"));
+            const a = window.QUESTION_BANK;
+            const cats = [...new Set(a.map(q => q.category))];
+            const d = { Easy: 0, Medium: 0, Hard: 0 };
+            a.forEach(q => { d[q.difficulty] = (d[q.difficulty] || 0) + 1; });
+            const min = Math.min(...cats.map(c => a.filter(q => q.category === c).length));
+            console.log("questions:", a.length, "categories:", cats.length,
+                        "min/category:", min, "E/M/H:", d.Easy, d.Medium, d.Hard);
+            const ok = a.length >= 1080 && cats.length === 18 && min >= 50 &&
+                       Math.min(d.Easy, d.Medium, d.Hard) >= 360;
+            if (!ok) { console.error("bank census FAILED"); process.exit(1); }
+          '
+
+      - name: Run the suites
+        env:
+          TZ: Asia/Karachi
+        run: |
+          for t in pwa regressions quiz-actions content-difficulty; do
+            echo "== $t =="
+            node "tests/$t.test.mjs"
+          done
+
+  bank:
+    name: Question bank is reproducible
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Rebuild the bank
+        run: python3 tools/question_bank/build.py
+
+      - name: It must reproduce the committed file byte for byte
+        run: git diff --exit-code pwa/js/question-bank.js
+
+  apk:
+    name: APK (tags only)
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install the Android SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_HOME" \
+            "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+
+      - name: Build and sign
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+        run: bash apk/build-offline.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mental-Maths-Practice
+          path: apk/Mental-Maths-Practice.apk

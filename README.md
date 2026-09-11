@@ -296,6 +296,11 @@ router, real localStorage):
 cd tests && npm install && npm test
 ```
 
+On every push and pull request, `.github/workflows/ci.yml` runs the same four
+suites (plus a syntax check on every app script, a question-bank census and a
+check that `tools/question_bank/build.py` reproduces the committed bank byte for
+byte) and builds + signs the APK on `v*` tags.
+
 ```bash
 node tests/pwa.test.mjs              # 14 end-to-end scenarios
 node tests/regressions.test.mjs      # 15 regression scenarios for the bugs in BUGS.md
