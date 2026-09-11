@@ -119,7 +119,8 @@
   // The deletion is real (persisted storage), it never touches completed
   // history or the user's statistics, and it only ever removes the one
   // session whose id it was given.
-  function discardUnfinished(id) {
+  function discardUnfinished(snap) {
+    const id = snap && snap.id;
     const key = String(id);
     const engine = window.QuizEngine && window.QuizEngine.Quiz;
     // If the discarded session is the one running right now, stop it first so
@@ -130,16 +131,44 @@
       engine.progress = null;
       if (typeof engine._detachCallbacks === 'function') engine._detachCallbacks();
     }
-    StateStore.removeUnfinished(key);
+
+    // Delete from the SAME store Continue Quiz reads from, then prove it.
+    let removed = false;
+    try { removed = StateStore.removeUnfinished(key); } catch (e) { removed = false; }
+    if (!removed && snap) {
+      // The stored copy can disagree with the snapshot the card was built
+      // from (an id that round-tripped as a number, or a re-save that changed
+      // the object). Match the quiz itself so the tap is never a no-op.
+      const fingerprint = (x) => [
+        x.mode || '', x.startedAt || '', x.count || 0,
+        Array.isArray(x.questionIds) ? x.questionIds.join(',') : '',
+      ].join('|');
+      const want = fingerprint(snap);
+      const twin = StateStore.getUnfinished().find((x) => String(x.id) !== key && fingerprint(x) === want)
+        || StateStore.getUnfinished().find((x) => x.startedAt && x.startedAt === snap.startedAt && x.mode === snap.mode);
+      if (twin) {
+        try { removed = StateStore.removeUnfinished(twin.id); } catch (e) { removed = false; }
+      }
+    }
+
     // Re-render into the LIVE host: the node captured when the card was built
     // can be stale if the dashboard was rendered again afterwards, and a
     // re-render into a detached node would look like "nothing happened".
     const liveHost = document.getElementById('continueQuizHost');
     if (liveHost) renderContinueQuiz(liveHost);
     else route('/dashboard');
+    const left = StateStore.getUnfinished().length;
     const section = document.getElementById('continueSection');
-    if (section) section.hidden = (StateStore.getUnfinished().length === 0);
-    showToast('Quiz discarded.', 'success');
+    if (section) section.hidden = (left === 0);
+    // Never leave the user guessing: say what was removed and what is left.
+    if (removed) {
+      showToast(left
+        ? `Quiz discarded. ${left} unfinished ${left === 1 ? 'quiz' : 'quizzes'} left.`
+        : 'Quiz discarded. Continue Quiz is now empty.', 'success');
+    } else {
+      showToast('That quiz was already removed.', 'error');
+    }
+    return removed;
   }
 
   // -- Continue Quiz card ---------------------------------------------------
@@ -206,7 +235,7 @@
           danger: true,
         }).then((yes) => {
           if (!yes) return;      // "Keep It": close and change nothing
-          discardUnfinished(snap.id);
+          discardUnfinished(snap);
         });
       }}, 'Discard');
       actions.appendChild(discardBtn);

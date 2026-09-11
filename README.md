@@ -3,9 +3,9 @@
 A complete, polished, production-quality mental-math training platform for
 ISCSP exam preparation.
 
-> **Latest release — v1.2.1 (2026-09-11).** Signed Android APK:
+> **Latest release — v1.2.2 (2026-09-11).** Signed Android APK:
 > [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 583 KB,
-> versionCode 5, signed with the release key (v1 + v2 + v3 verified). It
+> versionCode 6, signed with the release key (v1 + v2 + v3 verified). It
 > installs as an in-place update over earlier builds and keeps your progress.
 > **v1.2.0 is the content + difficulty release:** **1,130 original questions**
 > across all 18 categories (50+ per category, split Easy / Medium / Hard by
@@ -24,7 +24,7 @@ ISCSP exam preparation.
 ```
 .
 ├── apk/
-│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.2.1 (583 KB)
+│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.2.2 (583 KB)
 │   ├── app/                          # Android project (Java + WebView wrapper)
 │   │   └── src/main/assets/          # PWA bundled inside the APK (file:///android_asset/)
 │   ├── gradle/wrapper/               # Gradle wrapper
@@ -73,11 +73,11 @@ With a computer and USB debugging enabled: `adb install -r Mental-Maths-Practice
 | What | Value |
 |---|---|
 | Package | `com.iscsp.mentalmatharena` |
-| Version | versionCode 5 · versionName 1.2.1 |
+| Version | versionCode 6 · versionName 1.2.2 |
 | Size | 583 KB (596,899 bytes) |
 | Min / target SDK | 21 (Android 5.0) / 34 (Android 14) |
 | Signature | v1 + v2 + v3, release key SHA-256 `2d7470c4a5239d5d…` |
-| MD5 | `6f226f5acdcdd2dab7fbb55b906c3d4a` |
+| MD5 | `826106bb9e222fcdd13057023f20477f` |
 
 ## Live progress log
 
@@ -317,7 +317,8 @@ node tests/pwa.test.mjs              # 14 end-to-end scenarios
 node tests/regressions.test.mjs      # 15 regression scenarios for the bugs in BUGS.md
 node tests/quiz-actions.test.mjs     # 6 scenarios for the quiz action bar + Quit dialog
 node tests/content-difficulty.test.mjs  # 15 scenarios for the question bank + chooser
-node tests/timer-discard.test.mjs     # 15 scenarios for the quiz timer + discarding a quiz
+node tests/timer-discard.test.mjs     # 19 scenarios for the quiz timer + discarding a quiz
+node tests/theme-contrast.test.mjs    # 49 WCAG contrast + light-theme regression checks
 APP_DIR=/path/to/assets node tests/pwa.test.mjs   # test a built bundle (e.g. an APK's assets/)
 ```
 
@@ -460,7 +461,7 @@ spread.
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 592,803 bytes (579 KB),
 `versionCode 4`, `versionName 1.2.0`, minSdk 21 / targetSdk 34, signed
 v1 + v2 + v3 with the same release key (cert SHA-256 `2d7470c4…`),
-MD5 `6f226f5acdcdd2dab7fbb55b906c3d4a`.
+MD5 `826106bb9e222fcdd13057023f20477f`.
 
 ### Step 21 — v1.2.1: Discard Quiz and the quiz timer actually work
 
@@ -504,6 +505,53 @@ harness paused the quiz before the assertions ran.
 
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 596,899 bytes (583 KB),
 `versionCode 5`, `versionName 1.2.1`, minSdk 21 / targetSdk 34, signed
+v1 + v2 + v3 with the same release key.
+
+### Step 22 — v1.2.2: Discard Quiz root cause + dark-theme accessibility
+
+**Discard Quiz — the real root cause.** Two things kept the button from
+deleting anything on a device:
+- **A stale service worker.** The app is cached offline under `iscsp-mm-v8`
+  with a cache-first strategy and no revalidation, so an updated APK kept
+  being served the *old* `ui.js`. The cache is now `iscsp-mm-v9` (the worker
+  already deletes superseded caches, calls `skipWaiting()` and
+  `clients.claim()`, so the new assets activate immediately).
+- **An unverified delete.** `discardUnfinished()` now deletes from the same
+  store Continue Quiz reads from, checks the result, and if the id no longer
+  matches (a snapshot that drifted from the stored copy) falls back to
+  matching the quiz itself by mode + start time + question list. It then
+  re-renders into the **live** `#continueQuizHost` and reports what happened
+  ("Quiz discarded. 2 unfinished quizzes left.") instead of failing silently.
+  The confirmation dialog also re-centres with `margin: auto` so its buttons
+  can never be stranded below the fold on a short screen.
+
+**Dark theme — rebuilt on measured contrast.** Every dark-mode pair was
+scored with the WCAG relative-luminance formula and adjusted until it passed:
+
+| | before | after |
+|---|---|---|
+| Icons/labels on the indigo chips (mode, continue, difficulty, nav) | **1.40:1** | **9.16:1** |
+| Accent text on a card (Start Easy/Medium/Hard, category label) | 2.63:1 | 9.60:1 |
+| Outlined control borders (Hint, Quit, Keep It, Discard) | 1.62:1 | 3.43:1 |
+| Card borders | 1.27:1 | 1.54:1 (subtle by design) |
+| Muted text | 3.96:1 | 7.44:1 |
+| Error / warning / success text | 3.2–4.4:1 | 7.6–10.6:1 |
+| White label on the success button | 3.57:1 | 5.01:1 |
+
+The page/card/elevated surfaces now form a visible three-step hierarchy, and
+placeholders, focus rings and selection colours were made visible too. This is
+done with **new semantic tokens** (`--c-on-chip`, `--c-accent-text`,
+`--c-success-text`, `--c-error-text`, `--c-warning-border`) whose light-mode
+values are exactly the colours those rules used before — so **the light theme
+is pixel-identical**, which the test suite pins value by value.
+
+**Verification** — 118/118 across six suites: `pwa` 14/14, `regressions` 15/15,
+`quiz-actions` 6/6, `content-difficulty` 15/15, `timer-discard` 19/19,
+`theme-contrast` 49/49; all re-run against the `assets/` extracted from the
+finished APK.
+
+**Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 596,899 bytes (583 KB),
+`versionCode 6`, `versionName 1.2.2`, minSdk 21 / targetSdk 34, signed
 v1 + v2 + v3 with the same release key.
 
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 519,003 bytes (507 KB),

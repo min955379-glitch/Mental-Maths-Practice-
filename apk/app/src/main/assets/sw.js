@@ -1,4 +1,4 @@
-const CACHE = 'iscsp-mm-v8';
+const CACHE = 'iscsp-mm-v9';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './css/styles.css',
   './js/icons.js','./js/data.js','./js/question-bank.js','./js/generator.js','./js/normalize.js',

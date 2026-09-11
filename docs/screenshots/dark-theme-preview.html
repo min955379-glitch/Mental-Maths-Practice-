@@ -1,4 +1,4 @@
-:root {
+<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dark theme preview</title><style>:root {
   --c-navy-900: #060d2c;
   --c-navy-800: #0b1437;
   --c-navy-700: #111c4d;
@@ -43,7 +43,7 @@
   --header-h: 60px;
   --max-w: 1180px;
 }
-[data-theme="dark"] {
+html, [data-theme="dark"] {
   /* Page -> card -> elevated: a clearer three-step surface hierarchy. */
   --c-bg: #070b1c;
   --c-surface: #101741;
@@ -534,3 +534,108 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--c-indigo
   .continue-actions { flex-direction: column-reverse; align-items: stretch; }
   .continue-actions .btn { width: 100%; }
 }
+</style></head><body style="background:var(--c-bg);color:var(--c-text)">
+<script>(function () {
+  'use strict';
+  const I = {
+    check: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 12l5 5L20 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    x: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 9v4l3 2M9 3h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    target: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg>',
+    chart: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 20V8M10 20V4M16 20v-8M22 20H2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    brain: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 3 3h2V4H9zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-3 3h-2V4h2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+    bolt: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+    arrow: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    book: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2V5zM8 7h8M8 11h8M8 15h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+    trophy: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 4h12v6a6 6 0 1 1-12 0V4zM4 4h2M18 4h2M9 18h6M10 22h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    settings: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M19 12a7 7 0 0 0-.1-1.3l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2.2-1.3l-.4-2.4h-4l-.4 2.4a7 7 0 0 0-2.2 1.3l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .9.1 1.3l-2 1.5 2 3.4 2.3-.9c.7.5 1.4 1 2.2 1.3l.4 2.4h4l.4-2.4c.8-.3 1.5-.7 2.2-1.3l2.3.9 2-3.4-2-1.5c.1-.4.1-.9.1-1.3z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+    flame: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 2c1 3 4 4 4 8a4 4 0 1 1-8 0c0-2 1-3 2-4-.4 2 .4 3 2 3 0-2-1-4 0-7z" fill="currentColor"/></svg>',
+    refresh: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.5-6.3L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.3L3 16M3 21v-5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    play: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 4l14 8-14 8V4z" fill="currentColor"/></svg>',
+    user: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    logout: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 8l-4 4 4 4M6 12h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    warning: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3l10 18H2L12 3zM12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    hint: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c1 1 2 2 2 4h4c0-2 1-3 2-4a7 7 0 0 0-4-12z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+  };
+  window.Icons = I;
+})();
+</script>
+<div style="max-width:1120px;margin:0 auto;padding:24px 18px 48px">
+  <p style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-text-muted);font-weight:700;margin:0 0 8px">Dashboard</p>
+  
+    <section class="screen">
+      <div class="screen-head">
+        <div><p class="eyebrow" id="dashGreeting">Good afternoon</p><h1 class="screen-title">Mental Maths Practice</h1></div>
+        <div class="streak-pill" aria-label="Current streak">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 2c1 3 4 4 4 8a4 4 0 1 1-8 0c0-2 1-3 2-4-.4 2 .4 3 2 3 0-2-1-4 0-7z" fill="currentColor"></path></svg>
+          <span id="dashStreak">1-day streak</span>
+        </div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi"><span class="kpi-label">Accuracy</span><span class="kpi-value" id="kpiAccuracy">76%</span></div>
+        <div class="kpi"><span class="kpi-label">Questions solved</span><span class="kpi-value" id="kpiSolved">33</span></div>
+        <div class="kpi"><span class="kpi-label">Average time</span><span class="kpi-value" id="kpiAvgTime">3.7 sec</span></div>
+        <div class="kpi"><span class="kpi-label">Best score</span><span class="kpi-value" id="kpiBest">80%</span></div>
+      </div>
+      <h2 class="section-title" id="continueSection">Continue Quiz</h2>
+      <div id="continueQuizHost"><div class="continue-card card primary" data-session-id="id-mtwmvpoi8ln3k8"><div class="continue-head"><span class="continue-icon"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 4l14 8-14 8V4z" fill="currentColor"></path></svg></span><div class="continue-meta"><h3>Continue Quiz</h3><div class="continue-sub">Quick Practice</div></div></div><div class="continue-stats"><span class="cs-pill">4 / 10 completed</span><span class="cs-pill soft">40%</span><span class="cs-pill soft">6 remaining</span></div><div class="quiz-progressbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="40"><span style="width: 40%;"></span></div><div class="continue-actions"><button class="btn btn-primary" type="button"><span class="btn-icon"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M5 4l14 8-14 8V4z" fill="currentColor"></path></svg></span> Continue Quiz</button><button class="btn btn-ghost" type="button">Discard</button></div></div></div>
+      <h2 class="section-title">Practice modes</h2>
+      <div class="mode-grid">
+        <a class="mode-card" href="#/setup?mode=quick"><div class="mode-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 4l14 8-14 8V4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg></div><h3>Quick Practice</h3><p>10 questions, no pressure, instant feedback.</p></a>
+        <a class="mode-card" href="#/setup?mode=timed"><div class="mode-icon"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.8"></circle><path d="M12 9v4l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></div><h3>Timed Quiz</h3><p>20 questions under a 10-minute countdown.</p></a>
+        <a class="mode-card" href="#/setup?mode=fulltest"><div class="mode-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 4h16v16H4z M8 8h8M8 12h8M8 16h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg></div><h3>Full Test</h3><p>50-question exam-style session, mixed categories.</p></a>
+        <a class="mode-card" href="#/setup?mode=weak"><div class="mode-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M5 19l3-3M16 8l3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></div><h3>Weak Areas</h3><p>Auto-targeted practice from your weakest categories.</p></a>
+        <a class="mode-card" href="#/setup?mode=mistakes"><div class="mode-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3l9 16H3l9-16z M12 10v4M12 17h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg></div><h3>Mistake Review</h3><p>Practice the questions you got wrong.</p></a>
+        <a class="mode-card" href="#/categories"><div class="mode-icon"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></div><h3>By Category</h3><p>Focus on a single topic at a time.</p></a>
+      </div>
+      <h2 class="section-title">Performance overview</h2>
+      <div class="card">
+        <div id="categoryBars" class="bar-list" aria-label="Category performance"><div class="bar-row"><span class="bar-name">Percentages</span><div class="bar-track"><div class="bar-fill" style="width: 85%;"></div></div><span class="bar-pct">85%</span></div><div class="bar-row"><span class="bar-name">Fractions</span><div class="bar-track"><div class="bar-fill" style="width: 50%;"></div></div><span class="bar-pct">50%</span></div><div class="bar-row"><span class="bar-name">Averages</span><div class="bar-track"><div class="bar-fill" style="width: 100%;"></div></div><span class="bar-pct">100%</span></div><div class="bar-row"><span class="bar-name">Ratios Proportions</span><div class="bar-track"><div class="bar-fill" style="width: 100%;"></div></div><span class="bar-pct">100%</span></div><div class="bar-row"><span class="bar-name">Relative Speed</span><div class="bar-track"><div class="bar-fill" style="width: 100%;"></div></div><span class="bar-pct">100%</span></div></div>
+        <p class="muted" id="categoryEmpty" hidden="">Practice at least one quiz to see category performance.</p>
+      </div>
+      <h2 class="section-title">Recent activity</h2>
+      <div class="card" id="recentActivity"><div class="history-item"><div class="hi-mode">Quick Practice</div><div class="hi-score">8/10 - 80%</div><div class="hi-time">9/11/2026, 12:27:26 PM</div></div></div>
+    </section>
+  
+  <p style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-text-muted);font-weight:700;margin:32px 0 8px">Quiz screen</p>
+  
+    <section class="setup" aria-labelledby="setupHeading">
+      <p class="setup-eyebrow" id="setupEyebrow">Category practice</p>
+      <h2 id="setupHeading">Choose your difficulty</h2>
+      <p class="muted" id="setupSub">10 questions from Percentages. Choose how hard they should be.</p>
+      <p class="setup-recommend" id="setupRecommend">Recommended: Hard - You are holding 70% on Medium - Hard will stretch your timing.</p>
+      <div class="difficulty-grid" id="difficultyGrid"><button class="diff-card" type="button" data-difficulty="Easy"><div class="diff-head"><span class="diff-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19V11M12 19V5M19 19v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span><h3>Easy</h3></div><p class="diff-blurb">One clear step. The shortcut is visible as soon as you read it.</p><div class="diff-stats"><span>26 questions ready</span><span>Your accuracy: 100% over 10</span></div><div class="diff-bar"><span style="width: 100%;"></span></div><span class="diff-cta">Start Easy</span></button><button class="diff-card" type="button" data-difficulty="Medium"><div class="diff-head"><span class="diff-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19V9M12 19V5M19 19v-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span><h3>Medium</h3></div><p class="diff-blurb">Two steps, or a pattern you have to simplify before it becomes easy.</p><div class="diff-stats"><span>22 questions ready</span><span>Your accuracy: 70% over 10</span></div><div class="diff-bar"><span style="width: 70%;"></span></div><span class="diff-cta">Start Medium</span></button><button class="diff-card recommended" type="button" data-difficulty="Hard"><div class="diff-head"><span class="diff-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19V7M12 19V5M19 19v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></span><h3>Hard</h3><span class="diff-badge">Recommended</span></div><p class="diff-blurb">Multi-step reasoning, reverse problems and chained percentage changes.</p><div class="diff-stats"><span>20 questions ready</span><span>Not attempted yet</span></div><div class="diff-bar"><span style="width: 0%;"></span></div><span class="diff-cta">Start Hard</span></button></div>
+      <div class="setup-actions">
+        <button class="btn btn-ghost" type="button" id="setupMixed">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 7h7M13 7h7M4 12h11M4 17h4M11 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+          <span>Mixed difficulty</span>
+        </button>
+        <a class="btn btn-ghost" href="#/dashboard">Back to dashboard</a>
+      </div>
+    </section>
+  
+  <p style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-text-muted);font-weight:700;margin:32px 0 8px">Discard confirmation</p>
+  <div style="position:relative;height:300px"><div class="modal-backdrop show" style="position:absolute;inset:0" id="confirmModal"="">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+      <div class="modal-icon" id="confirmIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path id="confirmIconPath" d="M12 8v5M12 16.5v.5M12 3l9.5 17H2.5L12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </div>
+      <h2 class="modal-title" id="confirmTitle">Are you sure?</h2>
+      <p class="modal-text" id="confirmMessage"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="confirmCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmOk">Confirm</button>
+      </div>
+    </div>
+  </div></div>
+</div>
+<script>
+  // fill in the SVG icons and the dialog copy the same way the app does
+  document.querySelectorAll('[data-icon]').forEach(function(n){});
+  document.getElementById('confirmTitle').textContent = 'Discard this quiz?';
+  document.getElementById('confirmMessage').textContent = 'Your progress will be lost and the quiz will be removed from Continue Quiz.';
+  var ok = document.getElementById('confirmOk'); ok.textContent = 'Discard Quiz'; ok.className = 'btn btn-danger';
+  document.getElementById('confirmCancel').textContent = 'Keep It';
+  document.querySelector('.modal').classList.add('danger');
+</script>
+</body></html>

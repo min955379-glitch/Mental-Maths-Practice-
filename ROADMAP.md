@@ -2,9 +2,9 @@
 
 **App:** Mental Maths Practice (ISCSP exam preparation)
 **Repo:** [min955379-glitch/Mental-Maths-Practice-](https://github.com/min955379-glitch/Mental-Maths-Practice-)
-**Latest release:** **v1.2.1** (2026-09-11) — `apk/Mental-Maths-Practice.apk`, 583 KB, signed v1+v2+v3
-**Package:** `com.iscsp.mentalmatharena` (versionCode 5) · **PWA cache:** `iscsp-mm-v8`
-**Last reviewed:** v1.2.1 — Discard Quiz really deletes, and the quiz timer runs in every mode on a timestamp clock
+**Latest release:** **v1.2.2** (2026-09-11) — `apk/Mental-Maths-Practice.apk`, 583 KB, signed v1+v2+v3
+**Package:** `com.iscsp.mentalmatharena` (versionCode 6) · **PWA cache:** `iscsp-mm-v9`
+**Last reviewed:** v1.2.2 — Discard Quiz root cause fixed (stale service worker + unverified delete) and the dark theme rebuilt on measured WCAG contrast
 
 ---
 
@@ -13,11 +13,11 @@
 | Path | Status | What it is |
 |---|---|---|
 | `pwa/` | **ACTIVE / shipping** | The app itself: self-contained progressive web app — no build step, no backend, works offline, installable, and bundled into the Android APK. **All new features land here.** |
-| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.2.1, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
+| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.2.2, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
 | `apk/build.sh` | ACTIVE | Gradle rebuild: syncs `pwa/` → assets, `gradle assembleRelease`, signs with `release.keystore`. |
 | `apk/build-offline.sh` | ACTIVE | Gradle-free rebuild straight from the SDK tools (aapt2 → javac → d8 → zipalign → apksigner). This is how v1.1.0 was produced. |
 | `tools/question_bank/` | ACTIVE | Deterministic Python bank generator: 345 question families → 1,080 machine-verified questions across 18 categories (see `VALIDATION.md`). |
-| `tests/` | ACTIVE | JSDOM suites driving the real app: `pwa.test.mjs` (14 end-to-end scenarios) + `regressions.test.mjs` (15 regression scenarios) + `quiz-actions.test.mjs` (6 action-bar scenarios) + `content-difficulty.test.mjs` (15 bank/chooser scenarios) + `timer-discard.test.mjs` (15 timer/discard scenarios) + a 1,555-question hint sweep. |
+| `tests/` | ACTIVE | JSDOM suites driving the real app: `pwa.test.mjs` (14 end-to-end scenarios) + `regressions.test.mjs` (15 regression scenarios) + `quiz-actions.test.mjs` (6 action-bar scenarios) + `content-difficulty.test.mjs` (15 bank/chooser scenarios) + `timer-discard.test.mjs` (19 timer/discard scenarios) + `theme-contrast.test.mjs` (49 WCAG contrast + light-theme checks) + a 1,555-question hint sweep. |
 | `backend/` | PRESERVED (legacy) | Node + Express + Prisma (SQLite) API from the earlier full-stack iteration — the starting point if cloud sync ever lands. |
 | `frontend/` | PRESERVED (legacy) | React 18 + Vite + TypeScript SPA from the earlier iteration; needs the backend running, not used by the shipping app. |
 
@@ -170,6 +170,33 @@ finished APK**.
 against the assets extracted from the finished APK. Two older tests that were
 passing vacuously (`0 === 0`) were strengthened.
 
+### 1.11 v1.2.2 — Discard root cause + dark-theme accessibility (2026-09-11)
+
+**Discard Quiz**
+- [x] The offline service worker was serving a **stale `ui.js`** (cache-first,
+      `iscsp-mm-v8`, no revalidation), so a fixed APK kept running the old
+      code. Cache bumped to **v9**; the worker already purges old caches,
+      `skipWaiting()`s and `clients.claim()`s.
+- [x] The delete is now verified: if the id no longer matches the stored copy,
+      it falls back to matching the quiz by mode + startedAt + question list,
+      so a tap can never be a silent no-op.
+- [x] Re-renders into the live `#continueQuizHost` and tells the user what
+      happened (including how many unfinished quizzes remain).
+- [x] The confirmation dialog uses `margin: auto` so its buttons are always
+      reachable on a short viewport.
+
+**Dark theme**
+- [x] Rebuilt from measured WCAG contrast: icons on indigo chips **1.40:1 →
+      9.16:1**, accent text 2.63:1 → 9.60:1, outlined controls 1.62:1 →
+      3.43:1, muted text 3.96:1 → 7.44:1, status text 3.2–4.4:1 → 7.6–10.6:1.
+- [x] Clear page → card → elevated surface hierarchy; visible card borders,
+      placeholders, focus rings and selection colour.
+- [x] Implemented with new semantic tokens whose light values are the old
+      colours, so the **light theme is unchanged** (pinned by tests).
+
+**Verification** — 118/118 across six suites, re-run against the assets
+extracted from the finished APK.
+
 ---
 
 ## 2. In progress / next up
@@ -220,6 +247,7 @@ passing vacuously (`0 === 0`) were strengthened.
 
 | Version | Date | Highlights | File |
 |---|---|---|---|
+| **v1.2.2** | 2026-09-11 | Discard Quiz root cause: the offline service worker was serving stale JS (cache bumped to v9) and the delete is now verified with a fallback match, live re-render and user feedback; dark theme rebuilt on measured WCAG contrast (icons 1.4:1 → 9.2:1) with the light theme untouched; 68 new tests | `apk/Mental-Maths-Practice.apk` |
 | **v1.2.1** | 2026-09-11 | Discard Quiz really deletes the selected unfinished quiz (id-safe, persisted, live dashboard refresh, gone after reload) and the quiz timer works in every mode on a monotonic timestamp clock (runs across questions, resumes correctly, countdowns still finish the quiz); 15 new timer/discard tests | `apk/Mental-Maths-Practice.apk` |
 | **v1.2.0** | 2026-09-11 | Content + difficulty release: **1,130 verified questions** (60 per category × 18, 20/20/20 Easy/Medium/Hard), **EASY · MEDIUM · HARD chooser before every quiz** with per-difficulty accuracy + adaptive recommendation, generators for every category, rotation without repeats, reworked quiz action bar (Submit primary right, Hint \| Quit below) and an **in-app Quit modal** replacing `confirm()`; 50/50 tests | `apk/Mental-Maths-Practice.apk` |
 | **v1.1.1** | 2026-09-10 | Bug-review release: blank answers no longer graded wrong, null-safe `finish()`, throttled countdown persistence, local-time streaks, Expert question generation, CSP + credential/keystore hardening, 15 new regression tests | `apk/Mental-Maths-Practice.apk` |
@@ -254,7 +282,8 @@ node tests/pwa.test.mjs            # 14 end-to-end scenarios
 node tests/regressions.test.mjs    # 15 regression scenarios (BUGS.md fixes)
 node tests/quiz-actions.test.mjs   # 6 quiz action-bar + Quit dialog scenarios
 node tests/content-difficulty.test.mjs  # 15 question-bank + difficulty chooser scenarios
-node tests/timer-discard.test.mjs      # 15 quiz timer + discard scenarios (uses real wall-clock time)
+node tests/timer-discard.test.mjs      # 19 quiz timer + discard scenarios (uses real wall-clock time)
+node tests/theme-contrast.test.mjs     # 49 WCAG contrast + light-theme regression checks
 
 # 2. Point the same suites at any built bundle (e.g. assets extracted from an APK)
 APP_DIR=/path/to/extracted/assets node tests/pwa.test.mjs

@@ -1,5 +1,65 @@
 # Release Notes
 
+## v1.2.2 — Discard Quiz root cause + dark-theme accessibility
+
+**Release date:** 2026-09-11
+**File:** `apk/Mental-Maths-Practice.apk` (583 KB / 596,899 bytes, versionCode 6, versionName 1.2.2)
+**MD5:** `826106bb9e222fcdd13057023f20477f`
+**SHA-256:** `bd2231cb3559d36550766869e0506a7508fdb5eb09b7bc360f69054e9ca52e60`
+**Signed with the original release key** (SHA-256 `2d7470c4a5239d5df72090f5b0329b99efd394a305c54464b2800cb1ae129d43`), verified v1 + v2 + v3 →
+installs as an in-place update over every earlier build and keeps your progress.
+
+### Discard Quiz — why it kept failing, and the fix
+
+1. **A stale service worker.** The app is precached offline under
+   `iscsp-mm-v8` with a cache-first strategy and no revalidation, so an
+   updated install kept running the *old* `ui.js`. The cache is now
+   `iscsp-mm-v9`; the worker already deletes superseded caches, calls
+   `skipWaiting()` and `clients.claim()`, so the fixed assets take effect on
+   the first launch after the update.
+2. **The delete was never verified.** `discardUnfinished()` now removes the
+   session from the same store Continue Quiz reads from, checks that something
+   was actually removed, and if the stored copy has drifted from the card's
+   snapshot it falls back to matching the quiz itself (mode + start time +
+   question list). It re-renders into the live Continue Quiz container and
+   reports the outcome — "Quiz discarded. 2 unfinished quizzes left." — so a
+   tap can never again look like nothing happened.
+3. **The dialog could be unreachable.** A centred dialog that is taller than
+   the viewport pushes its buttons below the fold; it now uses `margin: auto`
+   and scrolls, with 44px tap targets.
+
+Verified: three unfinished quizzes, discard the middle one → only that one
+goes; Keep It deletes nothing; a discarded quiz does not come back after the
+app is closed and reopened; history, attempts and statistics are untouched.
+
+### Dark theme — readable, not just dark
+
+Every dark-mode pair was scored with the WCAG relative-luminance formula and
+corrected:
+
+| | before | after |
+|---|---|---|
+| Icons on the indigo chips (mode, continue, difficulty, nav, pills) | 1.40:1 | **9.16:1** |
+| Accent text on a card (Start Easy/Medium/Hard, category label) | 2.63:1 | **9.60:1** |
+| Outlined controls (Hint, Quit, Keep It, Discard) | 1.62:1 | **3.43:1** |
+| Muted / secondary text | 3.96:1 | **7.44:1** |
+| Error, warning and success text | 3.2–4.4:1 | **7.6–10.6:1** |
+| White label on the success button | 3.57:1 | **5.01:1** |
+
+Surfaces now step visibly page → card → elevated, and placeholders, focus
+rings, selection colour and the difficulty pills were made readable too. The
+work is done with new semantic tokens whose light values are exactly the
+colours those rules already used, so **the light theme is unchanged** — the
+test suite pins all 15 light values.
+
+### Verification
+
+118/118 automated tests — `pwa` 14/14, `regressions` 15/15, `quiz-actions`
+6/6, `content-difficulty` 15/15, `timer-discard` 19/19, `theme-contrast`
+49/49 — all re-run against the assets extracted from this signed APK.
+
+---
+
 ## v1.2.1 — Discard Quiz + quiz timer fixes
 
 **Release date:** 2026-09-11

@@ -86,7 +86,9 @@ function advance(dom) { byId(dom, 'fbNext').click(); }
 
 // Build N unfinished sessions without touching the UI (used to set up state).
 function makeUnfinished(win, mode, answered) {
-  const s = win.QuizEngine.buildSession(mode, { count: 5 });
+  // Always leave at least a couple of questions unanswered so the session
+  // stays unfinished instead of completing itself.
+  const s = win.QuizEngine.buildSession(mode, { count: answered + 3 });
   win.QuizEngine.Quiz.start(s);
   for (let i = 0; i < answered; i++) {
     win.QuizEngine.Quiz.submit(String(win.QuizEngine.Quiz.currentQuestion().correctAnswer));
@@ -221,6 +223,119 @@ await test('D6. Discarding the quiz that is currently open stops it from being r
   byId(dom, 'confirmOk').click();
   await sleep(60);                        // long enough for any stray tick
   eq(win.StateStore.getUnfinished().filter((s) => String(s.id) === id).length, 0, 'a running quiz must stay discarded');
+  dom.window.close();
+});
+
+await test('D7. The exact user flow: start, answer, leave, Keep It, then Discard', async () => {
+  const dom = makeApp(); const win = dom.window;
+  await go(dom, '#/setup?mode=quick');
+  (await waitFor(() => win.document.querySelector('.diff-card'), 2000, 'chooser')).click();
+  await waitFor(() => win.QuizEngine.Quiz.isActive(), 2000, 'session');
+  for (let i = 0; i < 3; i++) { answerCurrent(dom); advance(dom); }
+  await go(dom, '#/dashboard');                       // leave it unfinished
+  eq(win.StateStore.getUnfinished().length, 1, 'the quiz should be saved as unfinished');
+  eq(win.document.querySelectorAll('.continue-card').length, 1, 'Continue Quiz should show it');
+
+  // "Keep It" first
+  win.document.querySelector('.continue-card .continue-actions .btn-ghost').click();
+  await sleep(10);
+  byId(dom, 'confirmCancel').click();
+  await sleep(10);
+  eq(win.StateStore.getUnfinished().length, 1, 'Keep It must not delete anything');
+
+  // now discard for real
+  win.document.querySelector('.continue-card .continue-actions .btn-ghost').click();
+  await sleep(10);
+  byId(dom, 'confirmOk').click();
+  await sleep(20);
+  eq(win.StateStore.getUnfinished().length, 0, 'the quiz must be gone from storage');
+  eq(win.document.querySelectorAll('.continue-card').length, 0, 'the card must disappear immediately');
+  eq(byId(dom, 'continueSection').hidden, true, 'the Continue Quiz section should hide when empty');
+
+  const storage = dumpStorage(win);
+  dom.window.close();
+  const dom2 = makeApp(storage);
+  eq(dom2.window.StateStore.getUnfinished().length, 0, 'it must not come back after reopening the app');
+  // ...and a brand new quiz can still be saved and discarded afterwards.
+  const win2 = dom2.window;
+  await go(dom2, '#/setup?mode=quick');
+  (await waitFor(() => win2.document.querySelector('.diff-card'), 2000, 'chooser')).click();
+  await waitFor(() => win2.QuizEngine.Quiz.isActive(), 2000, 'session');
+  answerCurrent(dom2);
+  await go(dom2, '#/dashboard');
+  eq(win2.StateStore.getUnfinished().length, 1, 'a new unfinished quiz should be stored');
+  win2.document.querySelector('.continue-card .continue-actions .btn-ghost').click();
+  await sleep(10);
+  dom2.window.document.getElementById('confirmOk').click();
+  await sleep(20);
+  eq(win2.StateStore.getUnfinished().length, 0, 'the new quiz must discard too');
+  dom2.window.close();
+});
+
+await test('D8. Three unfinished quizzes: discarding the middle one leaves the other two', async () => {
+  const dom = makeApp(); const win = dom.window;
+  const a = makeUnfinished(win, 'quick', 4);
+  const b = makeUnfinished(win, 'category', 7);
+  const c = makeUnfinished(win, 'timed', 2);
+  await go(dom, '#/dashboard');
+  eq(win.document.querySelectorAll('.continue-card').length, 3, 'three cards expected');
+  const others = win.document.querySelectorAll('.continue-others-body .continue-card');
+  eq(others.length, 2, 'two should be in the collapsed list');
+  eq(others[0].getAttribute('data-session-id'), String(b.id), 'the middle quiz is first in the list');
+
+  others[0].querySelector('.continue-actions .btn-ghost').click();
+  await sleep(10);
+  byId(dom, 'confirmOk').click();
+  await sleep(20);
+
+  const ids = win.StateStore.getUnfinished().map((x) => String(x.id));
+  assert(!ids.includes(String(b.id)), 'Quiz B must be discarded');
+  assert(ids.includes(String(a.id)), 'Quiz A must survive');
+  assert(ids.includes(String(c.id)), 'Quiz C must survive');
+  eq(ids.length, 2, 'exactly one quiz should have been removed');
+  const cards = [...win.document.querySelectorAll('.continue-card')].map((el) => el.getAttribute('data-session-id'));
+  assert(!cards.includes(String(b.id)), 'the discarded quiz must not be rendered any more');
+  eq(cards.length, 2, 'the dashboard shows the two remaining quizzes');
+  dom.window.close();
+});
+
+await test('D9. Discard still works when the stored copy disagrees with the card snapshot', async () => {
+  const dom = makeApp(); const win = dom.window;
+  const a = makeUnfinished(win, 'quick', 2);
+  const b = makeUnfinished(win, 'category', 3);
+  await go(dom, '#/dashboard');
+  // Simulate the stored copy drifting away from the snapshot the card was
+  // built from (an id that round-tripped through JSON, or a re-save that
+  // replaced the object). Replace it with a clone carrying a new id, so the
+  // card's own id no longer matches anything in storage.
+  const arr = win.StateStore.State.data.unfinished;
+  const i = arr.findIndex((x) => String(x.id) === String(b.id));
+  arr[i] = JSON.parse(JSON.stringify(arr[i]));
+  arr[i].id = 'stale-' + String(b.id);
+  const card = [...win.document.querySelectorAll('.continue-card')].find((el) => el.getAttribute('data-session-id') === String(b.id));
+  assert(card, 'the card built from the older snapshot should still be rendered');
+  card.querySelector('.continue-actions .btn-ghost').click();
+  await sleep(10);
+  byId(dom, 'confirmOk').click();
+  await sleep(20);
+  const ids = win.StateStore.getUnfinished().map((x) => String(x.id));
+  assert(!ids.includes('stale-' + String(b.id)), 'the stale entry must be removed by the fallback');
+  assert(ids.includes(String(a.id)), 'the other quiz must be untouched');
+  dom.window.close();
+});
+
+await test('D10. The discard tells the user what happened', async () => {
+  const dom = makeApp(); const win = dom.window;
+  makeUnfinished(win, 'quick', 1);
+  makeUnfinished(win, 'category', 1);
+  await go(dom, '#/dashboard');
+  win.document.querySelector('.continue-card .continue-actions .btn-ghost').click();
+  await sleep(10);
+  byId(dom, 'confirmOk').click();
+  await sleep(20);
+  const toast = byId(dom, 'toast');
+  assert(/discarded/i.test(toast.textContent), `the user should be told it was discarded (got "${toast.textContent}")`);
+  assert(/1 unfinished quiz left/i.test(toast.textContent), `the remaining count should be reported (got "${toast.textContent}")`);
   dom.window.close();
 });
 
