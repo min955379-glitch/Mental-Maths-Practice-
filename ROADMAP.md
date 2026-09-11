@@ -2,9 +2,9 @@
 
 **App:** Mental Maths Practice (ISCSP exam preparation)
 **Repo:** [min955379-glitch/Mental-Maths-Practice-](https://github.com/min955379-glitch/Mental-Maths-Practice-)
-**Latest release:** **v1.1.1** (2026-09-10) — `apk/Mental-Maths-Practice.apk`, 507 KB, signed v1+v2+v3
-**Package:** `com.iscsp.mentalmatharena` (versionCode 3) · **PWA cache:** `iscsp-mm-v7`
-**Last reviewed:** v1.1.1 bug-review release — every item of `BUGS.md` answered in `BUGFIX-REPORT.md`
+**Latest release:** **v1.2.0** (2026-09-11) — `apk/Mental-Maths-Practice.apk`, 579 KB, signed v1+v2+v3
+**Package:** `com.iscsp.mentalmatharena` (versionCode 4) · **PWA cache:** `iscsp-mm-v8`
+**Last reviewed:** v1.2.0 content + difficulty release — 1,130 verified questions, difficulty chooser, reworked quiz action bar
 
 ---
 
@@ -13,10 +13,11 @@
 | Path | Status | What it is |
 |---|---|---|
 | `pwa/` | **ACTIVE / shipping** | The app itself: self-contained progressive web app — no build step, no backend, works offline, installable, and bundled into the Android APK. **All new features land here.** |
-| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.1.1, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
+| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.2.0, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
 | `apk/build.sh` | ACTIVE | Gradle rebuild: syncs `pwa/` → assets, `gradle assembleRelease`, signs with `release.keystore`. |
 | `apk/build-offline.sh` | ACTIVE | Gradle-free rebuild straight from the SDK tools (aapt2 → javac → d8 → zipalign → apksigner). This is how v1.1.0 was produced. |
-| `tests/` | ACTIVE | JSDOM suites driving the real app: `pwa.test.mjs` (14 end-to-end scenarios) + `regressions.test.mjs` (15 regression scenarios) + a 1,555-question hint sweep. |
+| `tools/question_bank/` | ACTIVE | Deterministic Python bank generator: 345 question families → 1,080 machine-verified questions across 18 categories (see `VALIDATION.md`). |
+| `tests/` | ACTIVE | JSDOM suites driving the real app: `pwa.test.mjs` (14 end-to-end scenarios) + `regressions.test.mjs` (15 regression scenarios) + `quiz-actions.test.mjs` (6 action-bar scenarios) + `content-difficulty.test.mjs` (15 bank/chooser scenarios) + a 1,555-question hint sweep. |
 | `backend/` | PRESERVED (legacy) | Node + Express + Prisma (SQLite) API from the earlier full-stack iteration — the starting point if cloud sync ever lands. |
 | `frontend/` | PRESERVED (legacy) | React 18 + Vite + TypeScript SPA from the earlier iteration; needs the backend running, not used by the shipping app. |
 
@@ -34,7 +35,8 @@
 - [x] 50 ISCSP-style seed questions (`data.js`), every answer independently verified
 - [x] 18 categories (Percentages, Speed/Distance/Time, Fractions, Ratios, Profit/Loss, Averages, Work/Time, Pipes/Tanks, Unit Conversion, Basic Arithmetic, Decimals, Mental Multiplication, Mental Division, Age Problems, Time Calculation, Relative Speed, Number Patterns, Mixed Mental Math)
 - [x] 4 difficulty levels: Easy / Medium / Hard / Expert
-- [x] Deterministic generators for 14 categories — answers computed by formula, never guessed
+- [x] Deterministic generators for **all 18 categories** — answers computed by formula, never guessed
+- [x] **1,130 questions**: 1,080 from the verified bank (`pwa/js/question-bank.js`) + the 50 original seeds — 60 per category, 20 Easy / 20 Medium / 20 Hard (see §1.9)
 - [x] Answer normalisation: whitespace/case, numeric equivalence, fractions, units, percent, time (`12:00 PM` = `12 PM` = `noon`)
 
 ### 1.3 Quiz experience
@@ -113,6 +115,32 @@ answer: [`BUGFIX-REPORT.md`](BUGFIX-REPORT.md).
 `assets/` extracted from the finished APK (29/29), and those assets are
 byte-identical to `pwa/`.
 
+### 1.9 v1.2.0 — Content + difficulty chooser + quiz action bar (2026-09-11)
+
+**Content (`tools/question_bank/`)**
+- [x] Deterministic Python bank: 345 original question families → **1,080 questions**, 60 per category × 18 categories, **20 Easy / 20 Medium / 20 Hard** each (requirement: ≥50 per category, ~17/17/16)
+- [x] Difficulty by **reasoning depth**, not digit size: Easy = one visible step; Medium = two steps or simplify-then-solve; Hard = multi-step reasoning, reverse problems, chained percentage changes
+- [x] Every family ships `gen` + `answer` + `verify` with exact `Fraction` arithmetic, so no answer key can be wrong; answers constrained to whole numbers or terminating decimals
+- [x] Generated hints ≥25 chars and never contain a number that is not already in the question (no answer leakage)
+- [x] Typography: `× ÷ − + =` everywhere, never `*`; no emoji
+- [x] The 50 original seeds are preserved unchanged (bank total 1,130)
+- [x] Runtime generators added for **Mental Division, Number Patterns and Mixed Mental Math** — previously they fell through and produced nothing
+- [x] Pool building is now **fresh seeds → generator → repeat reuse**, with a served-question memory (`StateStore.markServed`) so consecutive sessions rotate even when nothing is answered
+
+**Difficulty chooser**
+- [x] New pre-quiz screen: **mode → category → EASY / MEDIUM / HARD → start** (`#/setup?mode=…`)
+- [x] Cards show what the tier means, how many questions are ready, and your accuracy at that tier; adaptive recommendation badge + explanation; **Mixed difficulty** button preserves old behaviour
+- [x] Accuracy tracked **per difficulty** (and per category); tier shown as a pill during the quiz
+- [x] Expert stays generator-only and is pinned to the categories that have Expert generators (no more silent tier degradation)
+
+**Quiz action bar**
+- [x] Row 1 **Submit Answer** (primary, right) · Row 2 **Hint** (left) | **Quit** (right), on one two-column grid from 320 px to desktop
+- [x] **Quit uses an in-app modal** — never `confirm()`; Cancel stays in the quiz, Quit saves progress and Continue Quiz resumes it
+
+**Verification** — 50/50 across `pwa` (14), `regressions` (15), `quiz-actions` (6) and
+`content-difficulty` (15); **50/50 again against the `assets/` extracted from the
+finished APK**.
+
 ---
 
 ## 2. In progress / next up
@@ -130,9 +158,11 @@ byte-identical to `pwa/`.
 ## 3. Planned — feature backlog (not started)
 
 ### Learning & content
-- [ ] Expand the seed bank from 50 to ~200 questions, balanced across all 18 categories and 4 difficulties
-- [ ] Generators for the categories that still lack one (Mental Division, Time Calculation, Number Patterns, Mixed Mental Math, same-direction Relative Speed, decimal division)
-- [ ] Expert-difficulty content and an adaptive difficulty ramp
+- [x] ~~Expand the seed bank from 50 to ~200 questions~~ — **done in v1.2.0**: 1,130 questions (1,080 verified bank + 50 seeds), 60 per category
+- [x] ~~Generators for the categories that lack one~~ — **done in v1.2.0**: all 18 categories generate, including Mental Division, Number Patterns and Mixed Mental Math
+- [x] ~~Adaptive difficulty ramp~~ — **done in v1.2.0** as the pre-quiz difficulty chooser with per-tier accuracy and a recommended tier
+- [ ] Expert-difficulty content (Expert questions exist only as generator output for Percentages/Averages; no Expert seed bank yet)
+- [ ] Extend the verified bank with Expert-tier content
 - [ ] Spaced repetition: re-surface a missed question after 1 / 3 / 7 days
 - [ ] Worked-example mode ("show me"), kept clearly separate from the Hint nudge
 
@@ -159,6 +189,7 @@ byte-identical to `pwa/`.
 
 | Version | Date | Highlights | File |
 |---|---|---|---|
+| **v1.2.0** | 2026-09-11 | Content + difficulty release: **1,130 verified questions** (60 per category × 18, 20/20/20 Easy/Medium/Hard), **EASY · MEDIUM · HARD chooser before every quiz** with per-difficulty accuracy + adaptive recommendation, generators for every category, rotation without repeats, reworked quiz action bar (Submit primary right, Hint \| Quit below) and an **in-app Quit modal** replacing `confirm()`; 50/50 tests | `apk/Mental-Maths-Practice.apk` |
 | **v1.1.1** | 2026-09-10 | Bug-review release: blank answers no longer graded wrong, null-safe `finish()`, throttled countdown persistence, local-time streaks, Expert question generation, CSP + credential/keystore hardening, 15 new regression tests | `apk/Mental-Maths-Practice.apk` |
 | **v1.1.0** | 2026-09-10 | Hint button fixed (question-specific hints, answer-safety guard); Continue Quiz with full save/resume; History and state bugs fixed; APK rebuilt at 515 KB with the Gradle-free pipeline | `apk/Mental-Maths-Practice.apk` |
 | v1.0.0 | 2026-09-09 | First WebView-wrapper APK bundling the PWA; renamed to "Mental Maths Practice"; custom launcher icon; math typography cleanup | `apk/ISCSP-Mental-Math-Arena.apk` (superseded) |
@@ -189,6 +220,8 @@ ln -sfn /home/user/tests/node_modules tests/node_modules
 # 1. Run both suites against the PWA
 node tests/pwa.test.mjs            # 14 end-to-end scenarios
 node tests/regressions.test.mjs    # 15 regression scenarios (BUGS.md fixes)
+node tests/quiz-actions.test.mjs   # 6 quiz action-bar + Quit dialog scenarios
+node tests/content-difficulty.test.mjs  # 15 question-bank + difficulty chooser scenarios
 
 # 2. Point the same suites at any built bundle (e.g. assets extracted from an APK)
 APP_DIR=/path/to/extracted/assets node tests/pwa.test.mjs

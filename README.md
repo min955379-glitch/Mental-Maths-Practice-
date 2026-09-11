@@ -3,25 +3,28 @@
 A complete, polished, production-quality mental-math training platform for
 ISCSP exam preparation.
 
-> **Latest release — v1.1.1 (2026-09-10).** Signed Android APK:
-> [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 507 KB,
-> versionCode 3, signed with the release key (v1 + v2 + v3 verified). It
+> **Latest release — v1.2.0 (2026-09-11).** Signed Android APK:
+> [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 579 KB,
+> versionCode 4, signed with the release key (v1 + v2 + v3 verified). It
 > installs as an in-place update over earlier builds and keeps your progress.
-> v1.1.0 fixed the dead **Hint button** and added **Continue Quiz**
-> (save / resume unfinished sessions); **v1.1.1 is the bug-review release** —
-> it fixes 5 confirmed bugs (blank answers counted as wrong, a crash in
-> `finish()`, a per-second localStorage write storm, and UTC-based streaks)
-> and hardens the app (CSP, no credential leakage, keystore passwords from the
-> environment). Every item of the review is answered in
-> [`BUGFIX-REPORT.md`](BUGFIX-REPORT.md). Details:
-> [`apk/RELEASE-NOTES.md`](apk/RELEASE-NOTES.md) · plan: [`ROADMAP.md`](ROADMAP.md).
+> **v1.2.0 is the content + difficulty release:** **1,130 original questions**
+> across all 18 categories (50+ per category, split Easy / Medium / Hard by
+> reasoning depth, not digit count), a new **EASY · MEDIUM · HARD chooser
+> before every quiz** with per-difficulty accuracy and adaptive
+> recommendations, unlimited generation for every category (Mental Division,
+> Number Patterns and Mixed Mental Math included), and a **reworked quiz
+> action bar** — Submit Answer primary on the right, Hint | Quit beneath it,
+> with an in-app Quit dialog instead of the browser `confirm()`. Every answer
+> is mathematically verified (zero wrong keys). Details:
+> [`apk/RELEASE-NOTES.md`](apk/RELEASE-NOTES.md) · plan: [`ROADMAP.md`](ROADMAP.md)
+> · bank design: [`tools/question_bank/VALIDATION.md`](tools/question_bank/VALIDATION.md).
 
 ## What's in this repository
 
 ```
 .
 ├── apk/
-│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.1.1 (507 KB)
+│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.2.0 (579 KB)
 │   ├── app/                          # Android project (Java + WebView wrapper)
 │   │   └── src/main/assets/          # PWA bundled inside the APK (file:///android_asset/)
 │   ├── gradle/wrapper/               # Gradle wrapper
@@ -70,11 +73,11 @@ With a computer and USB debugging enabled: `adb install -r Mental-Maths-Practice
 | What | Value |
 |---|---|
 | Package | `com.iscsp.mentalmatharena` |
-| Version | versionCode 3 · versionName 1.1.1 |
-| Size | 507 KB (519,003 bytes) |
+| Version | versionCode 4 · versionName 1.2.0 |
+| Size | 579 KB (592,803 bytes) |
 | Min / target SDK | 21 (Android 5.0) / 34 (Android 14) |
 | Signature | v1 + v2 + v3, release key SHA-256 `2d7470c4a5239d5d…` |
-| MD5 | `6605300584c4777f3305ce90bde6a0d9` |
+| MD5 | `d613929410a06666815eb4c744023766` |
 
 ## Live progress log
 
@@ -294,8 +297,10 @@ cd tests && npm install && npm test
 ```
 
 ```bash
-node tests/pwa.test.mjs          # 14 end-to-end scenarios
-node tests/regressions.test.mjs  # 15 regression scenarios for the bugs in BUGS.md
+node tests/pwa.test.mjs              # 14 end-to-end scenarios
+node tests/regressions.test.mjs      # 15 regression scenarios for the bugs in BUGS.md
+node tests/quiz-actions.test.mjs     # 6 scenarios for the quiz action bar + Quit dialog
+node tests/content-difficulty.test.mjs  # 15 scenarios for the question bank + chooser
 APP_DIR=/path/to/assets node tests/pwa.test.mjs   # test a built bundle (e.g. an APK's assets/)
 ```
 
@@ -374,6 +379,71 @@ them are now resolved or answered item by item in
 `node tests/regressions.test.mjs` → 15/15 · hint sweep over 1,555 questions →
 0 missing hints, 0 answer-revealing hints. Both suites were also run against
 the `assets/` extracted from the finished APK → 27/27.
+
+### Step 20 — v1.2.0: 1,130 questions, a difficulty chooser, and a reworked action bar
+
+**Content — 1,130 questions, 18 categories, zero wrong answers.** A
+deterministic Python bank generator (`tools/question_bank/`) now emits
+**1,080 machine-verified questions** from 345 original question families, and
+the 50 hand-written seeds from v1.0 are still bundled unchanged, for
+**1,130 total**. Every category has **60 questions** (≥50 required), split
+**20 Easy / 20 Medium / 20 Hard** by the *reasoning* it demands — Easy is one
+visible step, Medium is two steps or a pattern you must first simplify, Hard is
+multi-step reasoning, reverse problems or chained percentage changes.
+Questions are FPSC / PPSC / NTS-style originals (no copied text), and the
+generator proves each answer with exact `Fraction` arithmetic plus an
+independent `verify()` cross-check, so there is no chance of a wrong answer
+key. All user-facing maths uses `× ÷ − + =` — never `*` — and generated hints
+are checked to be ≥25 characters and never to contain a number that is not
+already in the question. Full design:
+[`tools/question_bank/VALIDATION.md`](tools/question_bank/VALIDATION.md).
+
+| | |
+|---|---|
+| Categories | 18 (all seeded, all generated) |
+| Questions per category | 60 (50 required) |
+| Total questions | 1,130 (1,080 generated + 50 seeds) |
+| Easy / Medium / Hard | 360 / 360 / 360 |
+| Answer verification | 100% by exact rational arithmetic |
+
+**Difficulty chooser before every quiz.** Every entry point now routes through
+`#/setup?mode=…`: pick a **mode** → pick a **category** (mixed by default) →
+pick **EASY / MEDIUM / HARD** → start. Each card shows a short blurb of what
+that tier means, how many questions are ready, and *your* accuracy at that
+difficulty; the tier the app recommends from your history is badge-marked and
+explained in a line below the heading. A **Mixed difficulty** button keeps the
+old behaviour. No emoji, typed-answer input only, and the chosen tier is shown
+as a pill next to the category during the quiz and recorded per attempt, so
+accuracy is tracked **per difficulty** and per category.
+
+**Generators for every category.** Mental Division, Number Patterns and Mixed
+Mental Math previously had no runtime generator (they silently produced
+nothing when their seeds ran out). All three now generate unlimited questions
+(÷5/÷10/÷4/÷25/÷125 shortcuts, arithmetic/geometric/square/Fibonacci/rising-gap
+patterns, and chained-reasoning mixed problems) with difficulty-aware
+construction. Pool building is now *fresh seeds → generator → repeat reuse*,
+with a served-question memory so consecutive sessions keep rotating even when
+you answer nothing.
+
+**Reworked quiz action bar.** Row 1: **Submit Answer** (primary, right).
+Row 2: **Hint** (left) | **Quit** (right). One two-column grid keeps both rows
+on the same alignment grid from 320 px to desktop, with matching heights,
+radii, icon sizes and gaps. **Quit now uses an in-app modal** — never the
+native `confirm()` — with Cancel (stay in the quiz) and Quit (save progress
+and return to the dashboard, where Continue Quiz resumes it).
+
+**Verification** — 50/50 across four suites: `pwa` 14/14, `regressions` 15/15,
+`quiz-actions` 6/6, `content-difficulty` 15/15 — and **50/50 again against the
+`assets/` extracted from the finished APK**. The bank suite checks 50+ per
+category, ≥17 per difficulty per category, question uniqueness, `× ÷ −`
+typography, no `*`, hint safety, the full chooser flow, per-difficulty
+accuracy, rotation without repeats, adaptive recommendations and the full-test
+spread.
+
+**Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 592,803 bytes (579 KB),
+`versionCode 4`, `versionName 1.2.0`, minSdk 21 / targetSdk 34, signed
+v1 + v2 + v3 with the same release key (cert SHA-256 `2d7470c4…`),
+MD5 `d613929410a06666815eb4c744023766`.
 
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 519,003 bytes (507 KB),
 `versionCode 3`, `versionName 1.1.1`, minSdk 21 / targetSdk 34, signed

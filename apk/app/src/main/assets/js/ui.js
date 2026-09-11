@@ -15,6 +15,58 @@
     return e;
   }
   function clear(node) { while(node.firstChild) node.removeChild(node.firstChild); }
+  // ---------------------------------------------------------------------------
+  // In-app confirmation dialog
+  // Replaces the native browser confirm() so confirmations match the app's
+  // design system, work offline in the APK, and can be driven by tests.
+  // ---------------------------------------------------------------------------
+  let confirmResolver = null;
+  let confirmReturnFocus = null;
+  let confirmWired = false;
+
+  function confirmDialog(opts) {
+    opts = opts || {};
+    const modal = document.getElementById('confirmModal');
+    if (!modal) return Promise.resolve(!!window.confirm(opts.message || 'Are you sure?'));
+    if (!confirmWired) {
+      confirmWired = true;
+      document.getElementById('confirmOk').addEventListener('click', () => closeConfirm(true));
+      document.getElementById('confirmCancel').addEventListener('click', () => closeConfirm(false));
+      modal.addEventListener('click', (ev) => { if (ev.target === modal) closeConfirm(false); });
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape' && !modal.hidden) closeConfirm(false);
+      });
+    }
+    const box = modal.querySelector('.modal');
+    document.getElementById('confirmTitle').textContent = opts.title || 'Are you sure?';
+    document.getElementById('confirmMessage').textContent = opts.message || '';
+    const ok = document.getElementById('confirmOk');
+    const cancel = document.getElementById('confirmCancel');
+    ok.textContent = opts.confirmLabel || 'Confirm';
+    cancel.textContent = opts.cancelLabel || 'Cancel';
+    ok.className = 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary');
+    if (box) box.classList.toggle('danger', !!opts.danger);
+    confirmReturnFocus = document.activeElement;
+    modal.hidden = false;
+    const raf = window.requestAnimationFrame || ((fn) => setTimeout(fn, 16));
+    raf(() => modal.classList.add('show'));
+    try { ok.focus(); } catch (e) { /* focus is best-effort */ }
+    return new Promise((resolve) => { confirmResolver = resolve; });
+  }
+
+  function closeConfirm(result) {
+    const modal = document.getElementById('confirmModal');
+    if (!modal || modal.hidden) return;
+    modal.classList.remove('show');
+    modal.hidden = true;
+    const resolve = confirmResolver; confirmResolver = null;
+    if (confirmReturnFocus && confirmReturnFocus.focus) {
+      try { confirmReturnFocus.focus(); } catch (e) { /* best-effort */ }
+    }
+    confirmReturnFocus = null;
+    if (resolve) resolve(result);
+  }
+
   let toastTimer = null;
   function showToast(message, type) {
     const t = document.getElementById('toast'); if(!t) return;
@@ -100,10 +152,17 @@
       contBtn.appendChild(document.createTextNode(' ' + (isPrimary ? 'Continue Quiz' : 'Resume')));
       actions.appendChild(contBtn);
       const discardBtn = el('button', {class: 'btn btn-ghost', type: 'button', onclick: () => {
-        if (confirm('Discard this unfinished quiz? Your progress will be lost.')) {
+        confirmDialog({
+          title: 'Discard this quiz?',
+          message: 'Your progress will be lost and the quiz will be removed from Continue Quiz.',
+          confirmLabel: 'Discard Quiz',
+          cancelLabel: 'Keep It',
+          danger: true,
+        }).then((yes) => {
+          if (!yes) return;
           StateStore.removeUnfinished(snap.id);
           renderContinueQuiz(host);
-        }
+        });
       }}, 'Discard');
       actions.appendChild(discardBtn);
       card.appendChild(actions);
@@ -148,8 +207,100 @@
     if (recent.length === 0) { ra.innerHTML = '<p class="muted">No sessions yet. Start a practice to see your activity here.</p>'; }
     else { clear(ra); recent.forEach(s => { const score = Math.round((s.correct/Math.max(1,s.count))*100); const item = el('div', {class:'history-item'}); item.appendChild(el('div', {class:'hi-mode'}, modeLabel(s))); item.appendChild(el('div', {class:'hi-score'}, s.correct+'/'+s.count+' - '+score+'%')); item.appendChild(el('div', {class:'hi-time'}, new Date(s.startedAt).toLocaleString())); ra.appendChild(item); }); }
   }
-  function renderCategories(main) { const tpl = document.getElementById('tpl-categories'); main.appendChild(tpl.content.cloneNode(true)); const grid = document.getElementById('catGrid'); const counts = {}; (window.QUESTIONS || []).forEach(q => { counts[q.category] = (counts[q.category] || 0) + 1; }); window.CATEGORIES.forEach(cat => { const card = el('button', {class:'cat-card', type:'button', onclick:() => { location.hash = '#/category?cat=' + encodeURIComponent(cat); }}); card.appendChild(el('h3', null, cat));       const seeded = counts[cat] || 0;
+  function renderCategories(main) { const tpl = document.getElementById('tpl-categories'); main.appendChild(tpl.content.cloneNode(true)); const grid = document.getElementById('catGrid'); const counts = {}; (window.QUESTIONS || []).forEach(q => { counts[q.category] = (counts[q.category] || 0) + 1; }); window.CATEGORIES.forEach(cat => { const card = el('button', {class:'cat-card', type:'button', onclick:() => { location.hash = '#/setup?mode=category&cat=' + encodeURIComponent(cat); }}); card.appendChild(el('h3', null, cat));       const seeded = counts[cat] || 0;
       card.appendChild(el('div', {class:'cat-meta'}, seeded ? (seeded + ' seeded questions') : 'Generator only - unlimited questions')); grid.appendChild(card); }); }
+  // ------------------------------------------------- pre-quiz difficulty chooser
+  const DIFF_META = {
+    Easy: {
+      blurb: 'One clear step. The shortcut is visible as soon as you read it.',
+      icon: '<path d="M5 19V11M12 19V5M19 19v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+    },
+    Medium: {
+      blurb: 'Two steps, or a pattern you have to simplify before it becomes easy.',
+      icon: '<path d="M5 19V9M12 19V5M19 19v-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+    },
+    Hard: {
+      blurb: 'Multi-step reasoning, reverse problems and chained percentage changes.',
+      icon: '<path d="M5 19V7M12 19V5M19 19v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
+    }
+  };
+
+  function modeHeading(mode, cat) {
+    if (mode === 'category' && cat) return cat;
+    if (mode === 'quick') return 'Quick Practice';
+    if (mode === 'timed') return 'Timed Quiz';
+    if (mode === 'fulltest') return 'Full Test';
+    if (mode === 'weak') return 'Weak Areas';
+    if (mode === 'mistakes') return 'Mistake Review';
+    return 'Practice';
+  }
+  function modeSubtitle(mode, cat) {
+    if (mode === 'category' && cat) return '10 questions from ' + cat + '. Choose how hard they should be.';
+    if (mode === 'timed') return '20 questions, 10 minutes on the clock.';
+    if (mode === 'fulltest') return '50 questions across every category.';
+    if (mode === 'weak') return 'Drawn from the categories you score lowest on.';
+    if (mode === 'mistakes') return 'Questions you previously got wrong, plus fresh ones on the same topics.';
+    return '10 questions with instant feedback.';
+  }
+  function seededCount(cat, difficulty) {
+    return (window.QUESTIONS || []).filter(q => (!cat || q.category === cat) && q.difficulty === difficulty).length;
+  }
+
+  function renderSetup(main, opts) {
+    opts = opts || {};
+    const mode = ['quick','timed','fulltest','category','weak','mistakes'].indexOf(opts.mode) !== -1 ? opts.mode : 'quick';
+    const cat = (window.CATEGORIES || []).indexOf(opts.cat) !== -1 ? opts.cat : '';
+    clear(main);
+    const tpl = document.getElementById('tpl-setup');
+    main.appendChild(tpl.content.cloneNode(true));
+
+    document.getElementById('setupHeading').textContent = 'Choose your difficulty';
+    document.getElementById('setupEyebrow').textContent = cat ? 'Category practice' : modeHeading(mode, cat);
+    document.getElementById('setupSub').textContent = modeSubtitle(mode, cat);
+
+    const stats = window.Stats.difficultyStats(cat || null);
+    const rec = window.Stats.recommendedDifficulty(cat || null);
+    document.getElementById('setupRecommend').textContent = 'Recommended: ' + rec.difficulty + ' - ' + rec.reason;
+
+    const grid = document.getElementById('difficultyGrid');
+    ['Easy', 'Medium', 'Hard'].forEach(diff => {
+      const meta = DIFF_META[diff];
+      const stat = stats.find(x => x.difficulty === diff) || { attempts: 0, accuracy: 0 };
+      const available = seededCount(cat, diff);
+      const card = el('button', {
+        class: 'diff-card' + (rec.difficulty === diff ? ' recommended' : ''),
+        type: 'button',
+        'data-difficulty': diff,
+        onclick: () => { startQuiz(main, mode, { category: cat || null, difficulty: diff }); }
+      });
+      const head = el('div', { class: 'diff-head' });
+      head.appendChild(el('span', { class: 'diff-icon', 'aria-hidden': 'true', html: '<svg viewBox="0 0 24 24">' + meta.icon + '</svg>' }));
+      head.appendChild(el('h3', null, diff));
+      if (rec.difficulty === diff) head.appendChild(el('span', { class: 'diff-badge' }, 'Recommended'));
+      card.appendChild(head);
+      card.appendChild(el('p', { class: 'diff-blurb' }, meta.blurb));
+
+      const rows = el('div', { class: 'diff-stats' });
+      rows.appendChild(el('span', null, available + ' questions ready'));
+      rows.appendChild(el('span', null, stat.attempts
+        ? 'Your accuracy: ' + stat.accuracy + '% over ' + stat.attempts
+        : 'Not attempted yet'));
+      card.appendChild(rows);
+
+      const bar = el('div', { class: 'diff-bar' });
+      const fill = el('span', null, '');
+      fill.style.width = Math.max(0, Math.min(100, stat.accuracy)) + '%';
+      bar.appendChild(fill);
+      card.appendChild(bar);
+      card.appendChild(el('span', { class: 'diff-cta' }, 'Start ' + diff));
+      grid.appendChild(card);
+    });
+
+    document.getElementById('setupMixed').addEventListener('click', () => {
+      startQuiz(main, mode, { category: cat || null, difficulty: 'Mixed' });
+    });
+  }
+
   function renderSettings(main) {
     const tpl = document.getElementById('tpl-settings'); main.appendChild(tpl.content.cloneNode(true));
     const s = StateStore.getSettings();
@@ -162,9 +313,9 @@
       StateStore.setSettings({ theme:document.getElementById('setTheme').value, sound:document.getElementById('setSound').checked, timerInPractice:document.getElementById('setTimer').checked, hintMode:document.getElementById('setHint').checked, difficulty:document.getElementById('setDifficulty').value, defaultCount:parseInt(document.getElementById('setCount').value,10)||10, dailyGoal:parseInt(document.getElementById('setGoal').value,10)||20, reducedMotion:document.getElementById('setMotion').checked });
       showToast('Settings saved', 'success'); applyTheme(); applyMotionPref();
     });
-    document.getElementById('resetData').addEventListener('click', () => { if(confirm('This will delete all local data, sessions, attempts, and account. Continue?')) { StateStore.resetAll(); localStorage.removeItem('iscsp-mm-accounts-v1'); showToast('All local data reset', 'success'); location.hash = '#/dashboard'; route(); } });
+    document.getElementById('resetData').addEventListener('click', () => { confirmDialog({ title: 'Reset all data?', message: 'This will delete all local data, sessions, attempts, and your account. This cannot be undone.', confirmLabel: 'Reset Everything', cancelLabel: 'Cancel', danger: true }).then((yes) => { if(!yes) return; StateStore.resetAll(); localStorage.removeItem('iscsp-mm-accounts-v1'); showToast('All local data reset', 'success'); location.hash = '#/dashboard'; route('/dashboard'); }); });
   }
-  function renderHistory(main) { const tpl = document.getElementById('tpl-history'); main.appendChild(tpl.content.cloneNode(true)); const list = document.getElementById('historyList'); const sessions = Stats.recentSessions(100); if(sessions.length === 0) { list.appendChild(el('p', {class:'muted'}, 'No sessions yet.')); return; } sessions.forEach(s => { const score = Math.round((s.correct/Math.max(1,s.count))*100); const item = el('div', {class:'history-item'}); item.appendChild(el('div', {class:'hi-mode'}, modeLabel(s))); item.appendChild(el('div', {class:'hi-score'}, s.correct+'/'+s.count+' - '+score+'% - '+Stats.formatTime(s.totalResponseTimeMs/Math.max(1,s.count)))); item.appendChild(el('div', {class:'hi-time'}, new Date(s.startedAt).toLocaleString())); item.appendChild(el('button', {class:'btn btn-ghost btn-sm', type:'button', onclick: () => { if(confirm('Delete this session from history?')) { deleteSession(s.id); renderHistory(main); } }}, 'Delete'));
+  function renderHistory(main) { const tpl = document.getElementById('tpl-history'); main.appendChild(tpl.content.cloneNode(true)); const list = document.getElementById('historyList'); const sessions = Stats.recentSessions(100); if(sessions.length === 0) { list.appendChild(el('p', {class:'muted'}, 'No sessions yet.')); return; } sessions.forEach(s => { const score = Math.round((s.correct/Math.max(1,s.count))*100); const item = el('div', {class:'history-item'}); item.appendChild(el('div', {class:'hi-mode'}, modeLabel(s))); item.appendChild(el('div', {class:'hi-score'}, s.correct+'/'+s.count+' - '+score+'% - '+Stats.formatTime(s.totalResponseTimeMs/Math.max(1,s.count)))); item.appendChild(el('div', {class:'hi-time'}, new Date(s.startedAt).toLocaleString())); item.appendChild(el('button', {class:'btn btn-ghost btn-sm', type:'button', onclick: () => { confirmDialog({ title: 'Delete this session?', message: 'The session will be removed from your quiz history.', confirmLabel: 'Delete', cancelLabel: 'Cancel', danger: true }).then((yes) => { if(!yes) return; deleteSession(s.id); renderHistory(main); }); }}, 'Delete'));
     list.appendChild(item);
   }); }
   function deleteSession(id) {
@@ -186,10 +337,10 @@
         if (focusTarget) { try { focusTarget.focus(); } catch (e) { /* focus is best-effort */ } }
       }); });
     const loginMsg = document.getElementById('loginMsg'); const registerMsg = document.getElementById('registerMsg');
-    loginForm.addEventListener('submit', async (e) => { e.preventDefault(); loginMsg.textContent = ''; const fd = new FormData(loginForm); const res = await window.Auth.login({ email:fd.get('email'), password:fd.get('password') }); if(res.ok) { showToast('Welcome back', 'success'); location.hash = '#/dashboard'; route(); } else { loginMsg.textContent = res.msg; } });
-    registerForm.addEventListener('submit', async (e) => { e.preventDefault(); registerMsg.textContent = ''; const fd = new FormData(registerForm); if(fd.get('password') !== fd.get('confirm')) { registerMsg.textContent = 'Passwords do not match.'; return; } const res = await window.Auth.register({ name:fd.get('name'), email:fd.get('email'), password:fd.get('password') }); if(res.ok) { showToast('Account created', 'success'); location.hash = '#/dashboard'; route(); } else { registerMsg.textContent = res.msg; } });
+    loginForm.addEventListener('submit', async (e) => { e.preventDefault(); loginMsg.textContent = ''; const fd = new FormData(loginForm); const res = await window.Auth.login({ email:fd.get('email'), password:fd.get('password') }); if(res.ok) { showToast('Welcome back', 'success'); location.hash = '#/dashboard'; route('/dashboard'); } else { loginMsg.textContent = res.msg; } });
+    registerForm.addEventListener('submit', async (e) => { e.preventDefault(); registerMsg.textContent = ''; const fd = new FormData(registerForm); if(fd.get('password') !== fd.get('confirm')) { registerMsg.textContent = 'Passwords do not match.'; return; } const res = await window.Auth.register({ name:fd.get('name'), email:fd.get('email'), password:fd.get('password') }); if(res.ok) { showToast('Account created', 'success'); location.hash = '#/dashboard'; route('/dashboard'); } else { registerMsg.textContent = res.msg; } });
   }
-  function renderAccount(main) { const u = StateStore.getUser(); if(!u) { location.hash = '#/auth'; route(); return; } const tpl = document.getElementById('tpl-account'); main.appendChild(tpl.content.cloneNode(true)); const acc = window.Auth.getAccountDetails(); const t = Stats.totals(); document.getElementById('accName').textContent = acc.name; document.getElementById('accEmail').textContent = acc.email; document.getElementById('accSince').textContent = new Date(acc.since || acc.createdAt || Date.now()).toLocaleDateString(); document.getElementById('accSolved').textContent = t.total; document.getElementById('accAccuracy').textContent = t.total ? t.accuracy + '%' : '-'; document.getElementById('logoutBtn').addEventListener('click', () => { window.Auth.logout(); showToast('Signed out'); location.hash = '#/dashboard'; route(); }); }
+  function renderAccount(main) { const u = StateStore.getUser(); if(!u) { location.hash = '#/auth'; route('/auth'); return; } const tpl = document.getElementById('tpl-account'); main.appendChild(tpl.content.cloneNode(true)); const acc = window.Auth.getAccountDetails(); const t = Stats.totals(); document.getElementById('accName').textContent = acc.name; document.getElementById('accEmail').textContent = acc.email; document.getElementById('accSince').textContent = new Date(acc.since || acc.createdAt || Date.now()).toLocaleDateString(); document.getElementById('accSolved').textContent = t.total; document.getElementById('accAccuracy').textContent = t.total ? t.accuracy + '%' : '-'; document.getElementById('logoutBtn').addEventListener('click', () => { window.Auth.logout(); showToast('Signed out'); location.hash = '#/dashboard'; route('/dashboard'); }); }
 
   // -- Quiz screen ---------------------------------------------------------
   function startQuiz(main, mode, opts) {
@@ -205,7 +356,7 @@
     renderQuizScreen(main, session, 0);
   }
   function resumeQuiz(main, snapshot) {
-    if (!snapshot) { location.hash = '#/dashboard'; route(); return; }
+    if (!snapshot) { location.hash = '#/dashboard'; route('/dashboard'); return; }
     window.QuizEngine.Quiz.resume(snapshot);
     const session = window.QuizEngine.Quiz.current;
     renderQuizScreen(main, session, window.QuizEngine.Quiz.index);
@@ -223,6 +374,13 @@
     if (showTimer) { timerWrap.hidden = false; if(session.timeLimitSec) document.getElementById('qTimerText').textContent = Stats.formatMs(session.timeLimitSec*1000); else document.getElementById('qTimerText').textContent = '00:00'; }
     const q = session.questionCache[index];
     document.getElementById('qCategory').textContent = q.category; document.getElementById('qText').textContent = q.question;
+    const diffEl = document.getElementById('qDifficulty');
+    if (diffEl) {
+      const label = (session.difficulty && session.difficulty !== 'Mixed') ? session.difficulty : (q.difficulty || '');
+      diffEl.textContent = label && label !== 'Mixed' ? label : '';
+      diffEl.hidden = !diffEl.textContent;
+      if (diffEl.textContent) diffEl.setAttribute('data-difficulty', diffEl.textContent);
+    }
     const input = document.getElementById('qInput'); input.value = '';
     // If the question was already answered in a previous resume, show the
     // prior answer in the input (the user can change it).
@@ -269,14 +427,20 @@
     if (quitBtn) {
       quitBtn.onclick = (e) => {
         e.preventDefault();
-        if (confirm('Are you sure you want to leave? Your progress will be saved so you can continue this quiz later.')) {
+        confirmDialog({
+          title: 'Leave this quiz?',
+          message: 'Your progress will be saved so you can continue this quiz later.',
+          confirmLabel: 'Save & Quit Quiz',
+          cancelLabel: 'Keep Practising',
+        }).then((yes) => {
+          if (!yes) return;
           // Stop everything and go back to the dashboard. The snapshot has
           // already been saved on every action, so the session is safe.
           window.QuizEngine.Quiz.quit();
           showToast('Progress saved. Resume anytime from the dashboard.', 'success');
           location.hash = '#/dashboard';
-          route();
-        }
+          route('/dashboard');
+        });
       };
     }
 
@@ -367,7 +531,7 @@
     // snapshot is already saved; just route back to the dashboard.
     if (window.QuizEngine.isQuitSession(session)) {
       location.hash = '#/dashboard';
-      route();
+      route('/dashboard');
       return;
     }
     clear(main); const tpl = document.getElementById('tpl-result'); main.appendChild(tpl.content.cloneNode(true));
@@ -413,12 +577,19 @@
     engine.pause();
   }
 
-  function route() {
-    const { path, params } = parseRoute();
+  function route(explicitPath) {
+    const { path: hashPath, params } = parseRoute();
+    const path = explicitPath || hashPath;
     pauseActiveQuiz(path);
     const main = document.getElementById('main'); clear(main); main.scrollTop = 0; window.scrollTo(0,0);
     const sidenav = document.getElementById('sidenav'); if (sidenav) sidenav.classList.remove('open'); const scrim = document.getElementById('scrim'); if (scrim) scrim.classList.remove('show'); const toggle = document.getElementById('navToggle'); if (toggle) toggle.setAttribute('aria-expanded', 'false');
-    let routeName = path.replace(/^\//, '') || 'dashboard'; setActiveNav(routeName);
+    let routeName = path.replace(/^\//, '') || 'dashboard';
+    if (routeName === 'setup') {
+      const setupMode = params.mode;
+      routeName = (setupMode === 'timed' || setupMode === 'fulltest' || setupMode === 'weak' || setupMode === 'mistakes')
+        ? setupMode : (setupMode === 'category' ? 'categories' : 'practice');
+    }
+    setActiveNav(routeName);
     if (path === '/' || path === '' || path === '#/') renderLanding(main);
     else if (path === '/dashboard') renderDashboard(main);
     else if (path === '/practice') startQuiz(main, 'quick', { count:10 });
@@ -431,13 +602,14 @@
       if (params.cat && !known) { showToast('Unknown category. Starting mixed practice.', 'error'); }
       startQuiz(main, 'category', { category: known });
     }
+    else if (path === '/setup') renderSetup(main, { mode: params.mode, cat: params.cat });
     else if (path === '/weak') startQuiz(main, 'weak');
     else if (path === '/mistakes') startQuiz(main, 'mistakes');
     else if (path === '/resume') {
       const id = params.id;
       const unfinished = StateStore.getUnfinished();
       const snap = id ? unfinished.find(x => x.id === id) : unfinished[0];
-      if (snap) { resumeQuiz(main, snap); } else { showToast('No unfinished quiz to resume.', 'error'); location.hash = '#/dashboard'; route(); }
+      if (snap) { resumeQuiz(main, snap); } else { showToast('No unfinished quiz to resume.', 'error'); location.hash = '#/dashboard'; route('/dashboard'); }
     }
     else if (path === '/settings') renderSettings(main);
     else if (path === '/patterns') renderPatterns(main);
@@ -448,5 +620,5 @@
     else if (path === '/categories') renderCategories(main);
     else renderLanding(main);
   }
-  window.UI = { route, applyTheme, applyMotionPref, showToast, startQuiz, resumeQuiz, renderResult, renderContinueQuiz };
+  window.UI = { route, applyTheme, applyMotionPref, showToast, confirmDialog, closeConfirm, startQuiz, resumeQuiz, renderResult, renderContinueQuiz, renderSetup };
 })();

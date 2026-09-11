@@ -97,12 +97,210 @@
     const ans = parseFloat(((2*a*b)/(a+b)).toFixed(3));
     return { question:'A car travels from city A to city B at '+a+' km/h and returns at '+b+' km/h. What is the average speed for the whole journey?', correctAnswer:fmt(ans), acceptedAnswers:[fmt(ans)+' km/h', fmt(ans)+'kmph'], unit:'km/h', category:'Averages', difficulty:'Expert', shortcut:'Equal distances, so use 2ab/(a+b) = 2 \u00d7 '+a+' \u00d7 '+b+' / ('+a+' + '+b+') = '+fmt(ans)+' km/h. Never the plain mean of the two speeds.', explanation:'Average speed = total distance / total time. With equal distances d each way the times are d/'+a+' and d/'+b+', which simplifies to the harmonic mean 2ab/(a+b) = '+fmt(ans)+' km/h.', mentalPattern:'Average speed over equal DISTANCES = harmonic mean 2ab/(a+b), not the arithmetic mean.', commonMistake:'Averaging the two speeds (('+a+'+'+b+')/2 = '+fmt((a+b)/2)+'), which overweights the slower leg.' };
   }
-  const GENERATORS = { 'Percentages': genPercentOf, 'Speed Distance Time': genSpeedDistanceTime, 'Fractions': genFractionOf, 'Ratios Proportions': genUnitPrice, 'Profit Loss': genProfitLoss, 'Pipes Tanks': genPipes, 'Unit Conversion': [genKmhToMs, genMsToKmh], 'Mental Multiplication': genMultiplyBy11, 'Decimals': genDecimalMultiply, 'Age Problems': genAgeProblem, 'Averages': genAverageOfSequence, 'Work Time': genWorkTime, 'Relative Speed': genOppositeDirection };
+  // ------------------------------------------------------- Mental Division
+  // Dividing by 5 / 25 / 4 / 20 / 50 is a shortcut, not long division.
+  function genMentalDivision() {
+    const kinds = [
+      { d: 5, label: 'double it and divide by ten', tip: 'Dividing by five is doubling, then dividing by ten.', diff: 'Easy' },
+      { d: 10, label: 'move the digits one place', tip: 'Dividing by ten just shifts the digits one place.', diff: 'Easy' },
+      { d: 4, label: 'halve it twice', tip: 'Dividing by four is halving, then halving again.', diff: 'Easy' },
+      { d: 25, label: 'multiply by four and divide by a hundred', tip: 'Dividing by twenty-five is times four, then divide by a hundred.', diff: 'Medium' },
+      { d: 20, label: 'halve it, then divide by ten', tip: 'Dividing by twenty is halving, then dividing by ten.', diff: 'Medium' },
+      { d: 50, label: 'double it and divide by a hundred', tip: 'Dividing by fifty is doubling, then dividing by a hundred.', diff: 'Medium' },
+      { d: 8, label: 'halve it three times', tip: 'Dividing by eight is halving three times.', diff: 'Hard' },
+      { d: 125, label: 'multiply by eight and divide by a thousand', tip: 'Dividing by a hundred and twenty-five is times eight, then divide by a thousand.', diff: 'Hard' }
+    ];
+    const k = pick(kinds);
+    const q = pick([12, 16, 18, 24, 25, 32, 36, 45, 48, 60, 75, 80, 90, 100, 120, 150, 200, 240, 300, 400, 500, 600, 750, 800, 1000, 125, 250, 375, 625]);
+    const n = k.d * q;
+    return {
+      question: 'Divide ' + n + ' by ' + k.d + '.',
+      correctAnswer: fmt(q), acceptedAnswers: [fmt(q)], unit: '',
+      category: 'Mental Division', difficulty: k.diff,
+      shortcut: k.tip + ' Here: ' + n + ' \u00f7 ' + k.d + ' = ' + fmt(q) + '.',
+      explanation: 'Use the shortcut (' + k.label + '): ' + n + ' \u00f7 ' + k.d + ' = ' + fmt(q) + ', and ' + fmt(q) + ' \u00d7 ' + k.d + ' = ' + n + ' checks it.',
+      mentalPattern: k.tip,
+      commonMistake: 'Starting long division instead of using the divisor\u2019s relationship to ten, a hundred or a thousand.',
+      sourceType: 'generated'
+    };
+  }
+
+  // --------------------------------------------------------- Number Patterns
+  function genNumberPatterns() {
+    const kind = pick(['arithmetic', 'geometric', 'squares', 'fibonacci', 'rising']);
+    if (kind === 'arithmetic') {
+      const start = pick([2, 3, 5, 7, 10, 12]);
+      const d = pick([3, 4, 5, 6, 7, 9, 11, 12, 15, 20]);
+      const terms = [0, 1, 2, 3, 4].map(i => start + d * i);
+      return {
+        question: 'What is the next number? ' + terms.join(', ') + ', ...',
+        correctAnswer: fmt(terms[4] + d), acceptedAnswers: [], unit: '',
+        category: 'Number Patterns', difficulty: d <= 6 ? 'Easy' : 'Medium',
+        shortcut: 'The gap is constant (' + d + '), so add it to the last term: ' + fmt(terms[4]) + ' + ' + d + '.',
+        explanation: 'Each term adds ' + d + ', so the next is ' + fmt(terms[4] + d) + '.',
+        mentalPattern: 'Constant gap means an arithmetic sequence: next = last + gap.',
+        commonMistake: 'Looking for a multiplying rule when the sequence is simply adding a fixed step.',
+        sourceType: 'generated'
+      };
+    }
+    if (kind === 'geometric') {
+      const start = pick([2, 3, 4, 5]);
+      const r = pick([2, 3, 4, 5]);
+      const terms = [0, 1, 2, 3, 4].map(i => start * Math.pow(r, i));
+      return {
+        question: 'What is the next number? ' + terms.join(', ') + ', ...',
+        correctAnswer: fmt(terms[4] * r), acceptedAnswers: [], unit: '',
+        category: 'Number Patterns', difficulty: r <= 3 ? 'Easy' : 'Medium',
+        shortcut: 'Each term is multiplied by ' + r + ', so ' + fmt(terms[4]) + ' \u00d7 ' + r + '.',
+        explanation: 'The ratio is ' + r + ', so the next term is ' + fmt(terms[4] * r) + '.',
+        mentalPattern: 'A constant RATIO means a geometric sequence.',
+        commonMistake: 'Adding a difference when the rule is multiplication.',
+        sourceType: 'generated'
+      };
+    }
+    if (kind === 'squares') {
+      const start = pick([2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+      const terms = [0, 1, 2, 3, 4].map(i => (start + i) * (start + i));
+      return {
+        question: 'What is the next number? ' + terms.join(', ') + ', ...',
+        correctAnswer: fmt((start + 5) * (start + 5)), acceptedAnswers: [], unit: '',
+        category: 'Number Patterns', difficulty: start <= 6 ? 'Easy' : 'Medium',
+        shortcut: 'The terms are consecutive squares: ' + start + '\u00b2, ' + (start + 1) + '\u00b2, and so on, so square ' + (start + 5) + '.',
+        explanation: 'Each term is the square of consecutive integers, so the next is ' + (start + 5) + '\u00b2 = ' + fmt((start + 5) * (start + 5)) + '.',
+        mentalPattern: 'Growing gaps that grow by two each time point to squares.',
+        commonMistake: 'Extending the last gap instead of spotting the squares.',
+        sourceType: 'generated'
+      };
+    }
+    if (kind === 'fibonacci') {
+      let a = pick([1, 2, 3, 4]);
+      let b = pick([2, 3, 5, 6]);
+      const terms = [a, b];
+      for (let i = 0; i < 3; i++) { const n = terms[terms.length - 1] + terms[terms.length - 2]; terms.push(n); }
+      const next = terms[terms.length - 1] + terms[terms.length - 2];
+      return {
+        question: 'What is the next number? ' + terms.join(', ') + ', ...',
+        correctAnswer: fmt(next), acceptedAnswers: [], unit: '',
+        category: 'Number Patterns', difficulty: 'Hard',
+        shortcut: 'Each term is the sum of the two before it: ' + terms[3] + ' + ' + terms[4] + '.',
+        explanation: 'Adding the last two terms gives ' + fmt(next) + '.',
+        mentalPattern: 'Fibonacci style: term = previous + the one before it.',
+        commonMistake: 'Hunting for a single multiplier when two previous terms are involved.',
+        sourceType: 'generated'
+      };
+    }
+    const start = pick([1, 2, 3, 4, 5]);
+    let d = pick([2, 3, 4]);
+    const terms = [start];
+    for (let i = 0; i < 4; i++) { terms.push(terms[terms.length - 1] + d); d += 1; }
+    return {
+      question: 'What is the next number? ' + terms.join(', ') + ', ...',
+      correctAnswer: fmt(terms[terms.length - 1] + d), acceptedAnswers: [], unit: '',
+      category: 'Number Patterns', difficulty: 'Hard',
+      shortcut: 'The gaps grow by one each step, so the next gap is ' + d + '.',
+      explanation: 'Differences rise by one, so the next term is ' + fmt(terms[terms.length - 1] + d) + '.',
+      mentalPattern: 'When the gaps are not constant, difference them again.',
+      commonMistake: 'Repeating the last gap instead of letting it grow.',
+      sourceType: 'generated'
+    };
+  }
+
+  // -------------------------------------------------------- Mixed Mental Math
+  function genMixedMentalMath() {
+    const kind = pick(['percentAdd', 'fractionScale', 'speedTime', 'averageScale', 'percentChain']);
+    if (kind === 'percentAdd') {
+      const n = pick([80, 120, 150, 200, 240, 300, 400]);
+      const p = pick([10, 20, 25, 50]);
+      const add = pick([5, 8, 12, 15, 20, 25]);
+      const ans = (p / 100) * n + add;
+      return {
+        question: 'Work out ' + p + '% of ' + n + ' and then add ' + add + '.',
+        correctAnswer: fmt(ans), acceptedAnswers: [], unit: '',
+        category: 'Mixed Mental Math', difficulty: p <= 25 ? 'Easy' : 'Medium',
+        shortcut: p + '% of ' + n + ' = ' + fmt((p / 100) * n) + ', then + ' + add + '.',
+        explanation: p + '% of ' + n + ' is ' + fmt((p / 100) * n) + '; adding ' + add + ' gives ' + fmt(ans) + '.',
+        mentalPattern: 'Split it into two single-step calculations.',
+        commonMistake: 'Adding the extra amount before taking the percentage.',
+        sourceType: 'generated'
+      };
+    }
+    if (kind === 'fractionScale') {
+      const den = pick([2, 3, 4, 5]);
+      const num = pick(den === 2 ? [1] : den === 3 ? [1, 2] : den === 4 ? [1, 3] : [1, 2, 3, 4]);
+      const base = den * pick([8, 10, 12, 15, 20, 24]);
+      const k = pick([3, 4, 5, 6]);
+      const ans = (base * num / den) * k;
+      return {
+        question: 'Find ' + num + '/' + den + ' of ' + base + ', then multiply the result by ' + k + '.',
+        correctAnswer: fmt(ans), acceptedAnswers: [], unit: '',
+        category: 'Mixed Mental Math', difficulty: k <= 4 ? 'Easy' : 'Medium',
+        shortcut: base + ' \u00f7 ' + den + ' \u00d7 ' + num + ' \u00d7 ' + k + '.',
+        explanation: num + '/' + den + ' of ' + base + ' is ' + fmt(base * num / den) + ', and \u00d7 ' + k + ' gives ' + fmt(ans) + '.',
+        mentalPattern: 'Divide first, then multiply - it keeps the numbers small.',
+        commonMistake: 'Multiplying everything first and then dividing.',
+        sourceType: 'generated'
+      };
+    }
+    if (kind === 'speedTime') {
+      const v = pick([30, 40, 45, 60, 72, 80, 90]);
+      const hours = pick([0.5, 1.5, 2, 2.5, 3, 4]);
+      const ans = v * hours;
+      return {
+        question: 'A car travels at ' + v + ' km/h for ' + hours + ' hours. How far does it go?',
+        correctAnswer: fmt(ans), acceptedAnswers: [fmt(ans) + ' km'], unit: 'km',
+        category: 'Mixed Mental Math', difficulty: Number.isInteger(hours) ? 'Easy' : 'Medium',
+        shortcut: 'Distance = speed \u00d7 time = ' + v + ' \u00d7 ' + hours + '.',
+        explanation: v + ' \u00d7 ' + hours + ' = ' + fmt(ans) + ' km.',
+        mentalPattern: 'Distance = speed \u00d7 time; a fractional hour is just scaling.',
+        commonMistake: 'Dividing instead of multiplying.',
+        sourceType: 'generated'
+      };
+    }
+    if (kind === 'averageScale') {
+      const a = pick([12, 15, 18, 20, 24, 30]);
+      const b = pick([26, 32, 36, 40, 44, 50]);
+      const k = pick([3, 4, 5, 10]);
+      const ans = ((a + b) / 2) * k;
+      return {
+        question: 'Find the average of ' + a + ' and ' + b + ', then multiply it by ' + k + '.',
+        correctAnswer: fmt(ans), acceptedAnswers: [], unit: '',
+        category: 'Mixed Mental Math', difficulty: k <= 5 ? 'Easy' : 'Medium',
+        shortcut: '(' + a + ' + ' + b + ') \u00f7 2 \u00d7 ' + k + '.',
+        explanation: 'The midpoint is ' + fmt((a + b) / 2) + ', and \u00d7 ' + k + ' gives ' + fmt(ans) + '.',
+        mentalPattern: 'Average of two numbers is their midpoint.',
+        commonMistake: 'Multiplying first, which makes the numbers unnecessarily big.',
+        sourceType: 'generated'
+      };
+    }
+    const n = pick([200, 400, 500, 600, 800]);
+    const p1 = pick([10, 20, 25, 50]);
+    const p2 = pick([10, 20, 25, 50]);
+    const ans = n * ((100 + p1) / 100) * ((100 - p2) / 100);
+    return {
+      question: 'Increase ' + n + ' by ' + p1 + '%, then decrease the result by ' + p2 + '%. What is the final value?',
+      correctAnswer: fmt(ans), acceptedAnswers: [], unit: '',
+      category: 'Mixed Mental Math', difficulty: 'Hard',
+      shortcut: 'Multiply by ' + ((100 + p1) / 100) + ', then by ' + ((100 - p2) / 100) + '.',
+      explanation: n + ' \u00d7 ' + ((100 + p1) / 100) + ' \u00d7 ' + ((100 - p2) / 100) + ' = ' + fmt(ans) + '.',
+      mentalPattern: 'Chained percentage changes multiply - a rise and a fall of the same size never cancel.',
+      commonMistake: 'Adding and subtracting the percentages on the original value.',
+      sourceType: 'generated'
+    };
+  }
+
+  const GENERATORS = { 'Percentages': genPercentOf, 'Speed Distance Time': genSpeedDistanceTime, 'Fractions': genFractionOf, 'Ratios Proportions': genUnitPrice, 'Profit Loss': genProfitLoss, 'Pipes Tanks': genPipes, 'Unit Conversion': [genKmhToMs, genMsToKmh], 'Mental Multiplication': genMultiplyBy11, 'Decimals': genDecimalMultiply, 'Age Problems': genAgeProblem, 'Averages': genAverageOfSequence, 'Work Time': genWorkTime, 'Relative Speed': genOppositeDirection,
+    'Mental Division': genMentalDivision, 'Number Patterns': genNumberPatterns, 'Mixed Mental Math': genMixedMentalMath };
   // Expert tier generators, used when the requested difficulty is Expert.
   const EXPERT_GENERATORS = { 'Percentages': [genSuccessivePercent, genReversePercent], 'Averages': [genAverageSpeedRoundTrip] };
 
   function generateOne(category, difficulty) {
-    const cats = category ? [category] : Object.keys(GENERATORS);
+    // An Expert request must be served by a category that actually has Expert
+    // generators, otherwise the tier silently degrades to Medium.
+    const expertCats = Object.keys(EXPERT_GENERATORS);
+    let cats = category ? [category] : Object.keys(GENERATORS);
+    if (difficulty === 'Expert') {
+      cats = (category && expertCats.indexOf(category) !== -1) ? [category] : expertCats;
+    }
     const usable = cats.filter(c => GENERATORS[c]);
     if (usable.length === 0) return null;
     const cat = pick(usable);

@@ -37,9 +37,73 @@
     const key = dayKey(new Date());
     return attempts().filter(x => attemptDay(x) === key).length;
   }
+  // ---------------------------------------------------------------- difficulty
+  function difficultyStats(category) {
+    const order = ['Easy', 'Medium', 'Hard'];
+    const acc = {};
+    order.forEach(d => { acc[d] = { difficulty:d, attempts:0, correct:0, totalMs:0 }; });
+    for (const x of attempts()) {
+      const d = x.difficulty;
+      if (!acc[d]) continue;
+      if (category && x.category !== category) continue;
+      acc[d].attempts++;
+      if (x.isCorrect) acc[d].correct++;
+      acc[d].totalMs += x.responseTimeMs || 0;
+    }
+    return order.map(d => ({
+      difficulty: d,
+      attempts: acc[d].attempts,
+      correct: acc[d].correct,
+      accuracy: acc[d].attempts ? Math.round((acc[d].correct / acc[d].attempts) * 100) : 0,
+      avgMs: acc[d].attempts ? Math.round(acc[d].totalMs / acc[d].attempts) : 0
+    }));
+  }
+
+  // Question ids already answered recently - used to keep a new session fresh.
+  function recentlySeenIds(limit) {
+    const cap = limit || 300;
+    const out = new Set();
+    // Questions the user answered...
+    const a = attempts();
+    for (let i = a.length - 1; i >= 0 && out.size < cap; i--) {
+      // ids are compared as strings: bank ids are numbers, generated ones 'g-...'
+      if (a[i] && a[i].questionId != null) out.add(String(a[i].questionId));
+    }
+    // ...plus questions already served, so back-to-back sessions rotate even
+    // if the previous one was abandoned without answering anything.
+    const served = (StateStore.getServed && StateStore.getServed()) || [];
+    for (let i = served.length - 1; i >= 0 && out.size < cap; i--) out.add(served[i]);
+    return out;
+  }
+
+  // Adaptive step: move up a tier once the current one is comfortable, drop
+  // back down when it is a struggle. Never sees fewer than `minSamples`.
+  function recommendedDifficulty(category, minSamples) {
+    const need = minSamples || 8;
+    const stats = difficultyStats(category);
+    const easy = stats[0], medium = stats[1], hard = stats[2];
+
+    if (easy.attempts < need) {
+      return { difficulty: 'Easy', reason: 'Start with Easy to lock in the core patterns and build speed.' };
+    }
+    if (easy.accuracy < 55) {
+      return { difficulty: 'Easy', reason: 'Easy is still your weakest result (' + easy.accuracy + '% over ' + easy.attempts + ' questions) - stay here until it feels routine.' };
+    }
+    if (medium.attempts < need) {
+      return { difficulty: 'Medium', reason: 'Easy is comfortable at ' + easy.accuracy + '%, so step up to Medium.' };
+    }
+    if (medium.accuracy < 55) {
+      return { difficulty: 'Medium', reason: 'Medium is at ' + medium.accuracy + '% - repeat it before moving on.' };
+    }
+    if (hard.attempts < need || hard.accuracy >= 55) {
+      return { difficulty: 'Hard', reason: 'You are holding ' + medium.accuracy + '% on Medium - Hard will stretch your timing.' };
+    }
+    return { difficulty: 'Medium', reason: 'Hard is at ' + hard.accuracy + '%, so consolidate on Medium first.' };
+  }
+
   function recentSessions(limit) { return sessions().slice().reverse().slice(0, limit||5); }
   function bestScore(mode) { const list = sessions().filter(s => !mode || s.mode === mode); if(list.length === 0) return null; return Math.max(...list.map(s => Math.round((s.correct/Math.max(1,s.count))*100))); }
   function formatTime(ms) { if(ms == null) return '-'; if(ms < 1000) return ms + ' ms'; return (ms/1000).toFixed(1) + ' sec'; }
   function formatMs(ms) { if(ms == null) return '-'; const s = Math.floor(ms/1000); const m = Math.floor(s/60); const rem = s%60; return String(m).padStart(2,'0') + ':' + String(rem).padStart(2,'0'); }
-  window.Stats = { totals, categoryStats, weakestCategories, performanceLabel, dailyStreak, questionsToday, recentSessions, bestScore, formatTime, formatMs, dayKey, attemptDay };
+  window.Stats = { totals, categoryStats, weakestCategories, performanceLabel, dailyStreak, questionsToday, recentSessions, bestScore, formatTime, formatMs, dayKey, attemptDay, difficultyStats, recentlySeenIds, recommendedDifficulty };
 })();

@@ -1,7 +1,7 @@
-const CACHE = 'iscsp-mm-v7';
+const CACHE = 'iscsp-mm-v8';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './css/styles.css',
-  './js/icons.js','./js/data.js','./js/generator.js','./js/normalize.js',
+  './js/icons.js','./js/data.js','./js/question-bank.js','./js/generator.js','./js/normalize.js',
   './js/state.js','./js/auth.js','./js/hints.js','./js/quiz.js','./js/stats.js',
   './js/coach.js','./js/patterns.js','./js/ui.js','./js/app.js',
   './icons/icon.svg'

@@ -23,7 +23,7 @@ const HTML_NO_SCRIPTS = rawHtml.replace(/<script src="[^"]+"><\/script>/g, '');
 
 function makeApp(seedStorage) {
   const dom = new JSDOM(HTML_NO_SCRIPTS, {
-    url: 'https://app.local/index.html',
+    url: 'https://app.local/index.html#/dashboard',   // start on a hash so app.js's boot never queues a navigation
     runScripts: 'dangerously',
     pretendToBeVisual: true,
   });
@@ -32,6 +32,14 @@ function makeApp(seedStorage) {
   win.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
   win.confirm = () => (win.__confirmAnswer !== undefined ? win.__confirmAnswer : true);
   win.scrollTo = () => {};
+
+  // jsdom keeps document.readyState === 'loading' during this synchronous
+  // setup, so app.js defers its boot() to DOMContentLoaded — which then fires
+  // in the middle of any test that awaits, re-routing and restarting the quiz.
+  // Force the boot to happen now, exactly once, like it does in a browser.
+  try {
+    Object.defineProperty(win.document, 'readyState', { value: 'complete', configurable: true });
+  } catch (e) { /* ignore: read-only in some jsdom versions */ }
   if (seedStorage) {
     for (const [k, v] of Object.entries(seedStorage)) win.localStorage.setItem(k, v);
   }
@@ -77,6 +85,13 @@ function answerCorrectly(dom, times = 1) {
     submitAnswer(dom, q.correctAnswer);
     nextQuestion(dom);
   }
+}
+// Answer the in-app confirmation dialog (it replaced the native confirm()).
+async function answerConfirm(dom, yes) {
+  const modal = dom.window.document.getElementById('confirmModal');
+  if (!modal || modal.hidden) throw new Error('the confirm dialog did not open');
+  dom.window.document.getElementById(yes ? 'confirmOk' : 'confirmCancel').click();
+  await sleep(0);
 }
 function continueCards(dom) {
   return [...dom.window.document.querySelectorAll('#continueQuizHost .continue-card')];
@@ -341,7 +356,7 @@ await test('10. Multiple unfinished quizzes coexist; the most recent is shown fi
   dom.window.close();
 });
 
-await test('11. Discard removes only the chosen unfinished quiz', () => {
+await test('11. Discard removes only the chosen unfinished quiz', async () => {
   const dom = makeApp();
   go(dom, '#/practice');
   answerCorrectly(dom, 1);
@@ -354,6 +369,7 @@ await test('11. Discard removes only the chosen unfinished quiz', () => {
   eq(ids.length, 2, 'expected two unfinished sessions');
   const target = continueCards(dom).find((c) => c.getAttribute('data-session-id') === ids[1]);
   [...target.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Discard').click();
+  await answerConfirm(dom, true);
 
   const left = dom.window.StateStore.getUnfinished().map((s) => s.id);
   eq(left.length, 1, 'exactly one session should remain');
@@ -361,18 +377,18 @@ await test('11. Discard removes only the chosen unfinished quiz', () => {
   dom.window.close();
 });
 
-await test('12. Quit asks for confirmation; confirming saves progress and returns to the dashboard', () => {
+await test('12. Quit asks for confirmation; confirming saves progress and returns to the dashboard', async () => {
   const dom = makeApp();
   go(dom, '#/practice');
   answerCorrectly(dom, 5);
 
-  dom.window.__confirmAnswer = false; // user cancels
   byId(dom, 'qQuit').click();
+  await answerConfirm(dom, false); // user cancels
   assert(dom.window.QuizEngine.Quiz.isActive(), 'cancelling should keep the user inside the quiz');
   assert(byId(dom, 'quizForm'), 'quiz screen should still be rendered after cancelling');
 
-  dom.window.__confirmAnswer = true; // user confirms
   byId(dom, 'qQuit').click();
+  await answerConfirm(dom, true); // user confirms
   eq(dom.window.QuizEngine.Quiz.isActive(), false, 'quitting should stop the quiz');
   eq(dom.window.location.hash, '#/dashboard', 'quitting should return to the dashboard');
   const unfinished = dom.window.StateStore.getUnfinished();

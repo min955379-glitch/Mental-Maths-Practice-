@@ -12,22 +12,39 @@
     else if (mode === 'timed') { count = opts.count || 20; timeLimitSec = (opts.minutes || 10) * 60; pool = buildPool({count, difficulty:'Mixed', category:null, preferSeed:true}); }
     else if (mode === 'fulltest') { count = 50; timeLimitSec = null; pool = buildPool({count, difficulty:'Mixed', category:null, preferSeed:true, balanced:true}); }
     else if (mode === 'category') { count = opts.count || 10; pool = buildPool({count, difficulty, category, preferSeed:true}); }
-    else if (mode === 'weak') { const cats = Stats.weakestCategories(1); category = cats[0] || null; count = opts.count || 10; pool = buildPool({count, difficulty, category, preferSeed:true}); }
-    else if (mode === 'mistakes') { pool = mistakePool(opts.count || 10); }
+    else if (mode === 'weak') {
+      const cats = Stats.weakestCategories(1);
+      category = cats[0] || null;
+      count = opts.count || 10;
+      // Adaptive: work at the hardest tier the user is actually holding up on.
+      if (!opts.difficulty || opts.difficulty === 'Mixed') {
+        difficulty = (Stats.recommendedDifficulty ? Stats.recommendedDifficulty(category).difficulty : difficulty);
+      }
+      pool = buildPool({count, difficulty, category, preferSeed:true});
+    }
+    else if (mode === 'mistakes') { count = opts.count || 10; pool = mistakePool(count, difficulty); }
     else { pool = buildPool({count:10, difficulty:'Mixed', preferSeed:true}); }
+    // Remember what was served so the next session rotates to fresh ones.
+    if (StateStore.markServed) StateStore.markServed(pool.map((q) => q.id));
     const session = { id:StateStore.uid(), userId:StateStore.getUser()?StateStore.getUser().id:'anon', mode, category, difficulty, count:pool.length, timeLimitSec, startedAt:new Date().toISOString(), completedAt:null, correct:0, incorrect:0, totalResponseTimeMs:0, fastestMs:null, questionIds:pool.map(q => q.id), questionCache:pool };
     return session;
   }
   function buildPool({count, difficulty, category, preferSeed, balanced}) {
     const seedPool = (window.QUESTIONS || []).slice();
-    const filteredSeed = seedPool.filter(q => { if(category && q.category !== category) return false; if(difficulty && difficulty !== 'Mixed' && q.difficulty !== difficulty) return false; return true; });
-    const pool = [];
+    const matches = (q) => {
+      if (category && q.category !== category) return false;
+      if (difficulty && difficulty !== 'Mixed' && q.difficulty !== difficulty) return false;
+      return true;
+    };
+    let filteredSeed = seedPool.filter(matches);
     // Nothing seeded at exactly this difficulty: step down to the hardest tier
     // that exists instead of silently falling back to an arbitrary mix.
     let useSeed;
+    let exactTier = true;          // false when we had to borrow another tier
     if (filteredSeed.length) {
       useSeed = filteredSeed.slice();
     } else {
+      exactTier = false;
       const tiers = { Expert: ['Expert', 'Hard'], Hard: ['Hard', 'Medium'] }[difficulty] || null;
       let found = null;
       if (tiers) {
@@ -38,24 +55,94 @@
       }
       useSeed = found || seedPool.slice();
     }
-    shuffle(useSeed);
-    const seedTake = Math.min(useSeed.length, Math.ceil(count * 0.7));
-    for (let i = 0; i < seedTake && pool.length < count; i++) pool.push(Object.assign({}, useSeed[i], {_origin:'seed'}));
-    while (pool.length < count) { const gen = window.Generator.generateOne(category, difficulty); if(gen) pool.push(Object.assign({}, gen, {_origin:'generated'})); else break; }
+
+    // Randomisation without repeats (master prompt):
+    //  1. within a session every question text is unique;
+    //  2. across sessions, questions answered recently are pushed to the back.
+    const seen = (window.Stats && window.Stats.recentlySeenIds) ? window.Stats.recentlySeenIds(300) : new Set();
+    const fresh = [], repeats = [];
+    for (const q of useSeed) (seen.has(String(q.id)) ? repeats : fresh).push(q);
+    shuffle(fresh); shuffle(repeats);
+
+    let ordered = fresh.concat(repeats);
+    if (balanced) ordered = balanceByCategory(ordered, category);
+
+    const pool = [];
+    const usedText = new Set();
+    function push(q, origin) {
+      if (!q) return false;
+      const key = String(q.question || '').trim().toLowerCase();
+      if (!key || usedText.has(key)) return false;
+      usedText.add(key);
+      pool.push(Object.assign({}, q, { _origin: origin }));
+      return true;
+    }
+
+    // The v1.2 bank holds at least 20 seeded questions for every
+    // (category, difficulty) pair, so short sessions are filled entirely from
+    // real seeds - the generator only tops up long ones. That keeps the chosen
+    // difficulty honest: generated items can only promise Easy/Medium.
+    // When the requested tier has no seeds of its own (Expert borrows Hard),
+    // leave room for the generator so the tier really is represented.
+    // Fresh seeds first: questions the user has not been served recently.
+    let seedTake = Math.min(fresh.length, count);
+    if (!exactTier && difficulty && difficulty !== 'Mixed') {
+      seedTake = Math.min(seedTake, Math.floor(count * 0.6));
+    }
+    for (let i = 0; i < seedTake && pool.length < count; i++) push(ordered[i], 'seed');
+
+    // Still short (a small category, or everything has already been served):
+    // generate brand new questions BEFORE reusing anything already seen.
+    let guard = 0;
+    const genDifficulty = (difficulty && difficulty !== 'Mixed') ? difficulty : null;
+    while (pool.length < count && guard++ < count * 25) {
+      const gen = window.Generator.generateOne(category, genDifficulty);
+      if (!gen) break;
+      push(gen, 'generated');
+    }
+    // Last resort: rather than hand back a short quiz, reuse seeds that were
+    // skipped only because the user had seen them recently.
+    if (pool.length < count) { for (let i = 0; i < ordered.length && pool.length < count; i++) push(ordered[i], 'seed'); }
     return pool.slice(0, count);
   }
-  function mistakePool(count) {
+
+  // Spread a long session evenly over the categories instead of letting the
+  // shuffle pile the first questions into two or three topics.
+  function balanceByCategory(list, category) {
+    if (category) return list;                 // one category: nothing to balance
+    const byCat = {};
+    for (const q of list) { const c = q.category || 'Other'; (byCat[c] = byCat[c] || []).push(q); }
+    for (const c of Object.keys(byCat)) shuffle(byCat[c]);
+    const out = [];
+    let more = true;
+    while (more) {
+      more = false;
+      for (const c of Object.keys(byCat)) {
+        if (byCat[c].length) { out.push(byCat[c].pop()); more = true; }
+      }
+    }
+    return out;
+  }
+  function mistakePool(count, difficulty) {
     const attempts = StateStore.getAttempts().filter(a => !a.isCorrect);
-    const seen = new Set(); const real = [];
+    const seen = new Set(); const texts = new Set(); const real = [];
+    const add = (q, origin) => {
+      const key = String(q.question || '').trim().toLowerCase();
+      if (!key || texts.has(key)) return;
+      texts.add(key); real.push(Object.assign({}, q, { _origin: origin }));
+    };
     for (let i = attempts.length-1; i >= 0 && real.length < count; i--) {
       const a = attempts[i]; if(seen.has(a.questionId)) continue;
       const q = findQuestion(a.questionId);
-      if(q) { seen.add(a.questionId); real.push(Object.assign({}, q, {_origin:'mistake'})); }
+      if(q) { seen.add(a.questionId); add(q, 'mistake'); }
     }
     if (real.length < count) {
-      const cats = Stats.weakestCategories(1); const cat = cats[0] || null;
-      const gen = window.Generator.generateMany(count - real.length, cat);
-      for (const g of gen) real.push(Object.assign({}, g, {_origin:'generated'}));
+      // Fill the rest from the weakest categories at the chosen difficulty, so
+      // the session stays on topic instead of dragging in random questions.
+      const cats = Stats.weakestCategories(3); const cat = cats[0] || null;
+      const work = (difficulty && difficulty !== 'Mixed') ? difficulty : (Stats.recommendedDifficulty ? Stats.recommendedDifficulty(cat).difficulty : null);
+      const gen = window.Generator.generateMany((count - real.length) * 8, cat, work);
+      for (const g of gen) { if (real.length >= count) break; add(g, 'generated'); }
     }
     return real.slice(0, count);
   }

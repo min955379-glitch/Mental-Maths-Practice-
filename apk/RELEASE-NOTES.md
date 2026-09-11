@@ -1,5 +1,62 @@
 # Release Notes
 
+## v1.2.0 — Content + difficulty release
+
+**Release date:** 2026-09-11
+**File:** `apk/Mental-Maths-Practice.apk` (579 KB / 592,803 bytes, versionCode 4, versionName 1.2.0)
+**MD5:** `d613929410a06666815eb4c744023766`
+**Signed with the original release key** (SHA-256 `2d7470c4a5239d5df72090f5b0329b99efd394a305c54464b2800cb1ae129d43`), verified v1 + v2 + v3 →
+installs as an in-place update over v1.1.1 and keeps every stat, session and unfinished quiz.
+
+### 1,130 original, machine-verified questions
+
+- **1,080 new questions** generated from 345 original question families, plus the 50
+  original seeds (kept unchanged) → **1,130 total**.
+- **60 questions in every one of the 18 categories** (requirement: 50+), split
+  **20 Easy / 20 Medium / 20 Hard** — 360 of each tier.
+- Difficulty is set by **reasoning depth, not digit size**: Easy is one visible step,
+  Medium is two steps or a pattern you must simplify first, Hard is multi-step
+  reasoning, reverse problems or chained percentage changes.
+- Every answer is proved with exact rational arithmetic and an independent
+  cross-check, so there are **no wrong answer keys**. Design and checks:
+  [`tools/question_bank/VALIDATION.md`](../tools/question_bank/VALIDATION.md).
+- FPSC / PPSC / NTS-style originals, no copied text, no emoji, `× ÷ − + =` only
+  (never `*`). Hints are ≥25 characters and never reveal the answer.
+
+### Difficulty chooser before every quiz
+
+- New pre-quiz screen: **mode → category → EASY / MEDIUM / HARD → start**.
+- Each card shows what the tier means, how many questions are ready and **your
+  accuracy at that tier**; the recommended tier is badge-marked with a one-line
+  reason. A **Mixed difficulty** button keeps the old behaviour.
+- Accuracy is now tracked **per difficulty** as well as per category, and the tier
+  you picked is shown as a pill during the quiz.
+
+### Generators for every category
+
+- **Mental Division, Number Patterns and Mixed Mental Math** now generate unlimited
+  questions (they previously fell through and produced nothing once their seeds ran
+  out).
+- Pool building is **fresh seeds → generator → repeat reuse**, with a
+  served-question memory so consecutive sessions keep rotating even when you answer
+  nothing.
+
+### Reworked quiz action bar
+
+- Row 1: **Submit Answer** (primary, right). Row 2: **Hint** (left) | **Quit**
+  (right). One grid, consistent heights / radii / icon sizes, no horizontal scroll
+  from 320 px up.
+- **Quit now uses an in-app modal** instead of the browser `confirm()`. Cancel keeps
+  you in the quiz; Quit saves progress and **Continue Quiz** resumes it.
+
+### Verification
+
+50/50 automated tests — `pwa` 14/14, `regressions` 15/15, `quiz-actions` 6/6,
+`content-difficulty` 15/15 — and **50/50 again against the `assets/` extracted from
+this signed APK**.
+
+---
+
 ## v1.1.1 — Bug-review release (5 confirmed bugs fixed + hardening)
 
 **Release date:** 2026-09-10

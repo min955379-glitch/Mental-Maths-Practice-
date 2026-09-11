@@ -25,7 +25,7 @@ const HTML_NO_SCRIPTS = rawHtml.replace(/<script src="[^"]+"><\/script>/g, '');
 
 function makeApp(seedStorage) {
   const dom = new JSDOM(HTML_NO_SCRIPTS, {
-    url: 'https://app.local/index.html',
+    url: 'https://app.local/index.html#/dashboard',   // start on a hash so app.js's boot never queues a navigation
     runScripts: 'dangerously',
     pretendToBeVisual: true,
   });
@@ -33,6 +33,14 @@ function makeApp(seedStorage) {
   win.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
   win.confirm = () => (win.__confirmAnswer !== undefined ? win.__confirmAnswer : true);
   win.scrollTo = () => {};
+
+  // jsdom keeps document.readyState === 'loading' during this synchronous
+  // setup, so app.js defers its boot() to DOMContentLoaded — which then fires
+  // in the middle of any test that awaits, re-routing and restarting the quiz.
+  // Force the boot to happen now, exactly once, like it does in a browser.
+  try {
+    Object.defineProperty(win.document, 'readyState', { value: 'complete', configurable: true });
+  } catch (e) { /* ignore: read-only in some jsdom versions */ }
   // jsdom ships no WebCrypto; the app needs it for password hashing.
   const cryptoShim = {
     getRandomValues: (arr) => webcrypto.getRandomValues(arr),
@@ -280,24 +288,24 @@ await test('R12. A Content-Security-Policy is declared and nothing loads from th
   }
 });
 
-await test('R13. Categories with no seed questions say so instead of showing "0 seeded questions"', () => {
+await test('R13. Every category is seeded, and no card ever shows a bare "0 seeded questions"', () => {
   const dom = makeApp();
   const win = dom.window;
   go(dom, '#/categories');
   const cards = [...dom.window.document.querySelectorAll('#catGrid .cat-card')];
   assert(cards.length > 0, 'no category cards rendered');
   const seededCounts = (win.QUESTIONS || []).reduce((m, q) => { m[q.category] = (m[q.category] || 0) + 1; return m; }, {});
-  let emptySeen = false;
   cards.forEach((card) => {
     const name = card.querySelector('h3').textContent.trim();
     const meta = card.querySelector('.cat-meta').textContent.trim();
-    if (!seededCounts[name]) {
-      emptySeen = true;
-      assert(!/0 seeded questions/.test(meta), `"${name}" still shows a bare zero count`);
-      assert(/generator/i.test(meta), `"${name}" should explain it is generator-backed: ${meta}`);
-    }
+    // the v1.2 bank seeds every category, so a zero count must never appear
+    assert(seededCounts[name] > 0, `"${name}" has no seeded questions`);
+    assert(!/\b0 seeded questions\b/.test(meta), `"${name}" shows a bare zero count: ${meta}`);
   });
-  assert(emptySeen, 'expected at least one category with no seed questions');
+  // and the bank itself must meet the master-prompt minimum
+  const perCat = Object.values(seededCounts);
+  eq(perCat.length, win.CATEGORIES.length, 'every category in CATEGORIES must be seeded');
+  assert(Math.min(...perCat) >= 50, 'each category must carry at least 50 questions, saw ' + Math.min(...perCat));
   dom.window.close();
 });
 

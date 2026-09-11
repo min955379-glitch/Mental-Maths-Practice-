@@ -11,6 +11,9 @@
     // answers + correctness + timings. They are migrated into `sessions`
     // when the quiz is finished.
     unfinished: [],
+    // served holds the ids of questions already put in front of the user, so
+    // consecutive sessions rotate instead of repeating the same ones.
+    served: [],
     settings: { theme:'auto', sound:false, timerInPractice:true, hintMode:true, difficulty:'Mixed', defaultCount:10, dailyGoal:20, reducedMotion:false }
   };
   function load() {
@@ -25,6 +28,7 @@
     if(!Array.isArray(p.sessions)) p.sessions = [];
     if(!Array.isArray(p.attempts)) p.attempts = [];
     if(!Array.isArray(p.unfinished)) p.unfinished = [];
+    if(!Array.isArray(p.served)) p.served = [];
     return p;
   }
   const State = { data: load(), save() { save(this.data); } };
@@ -38,6 +42,14 @@
   function getSessions() { return State.data.sessions.slice(); }
   function recordAttempt(a) { State.data.attempts.push(a); if(State.data.attempts.length>5000) State.data.attempts = State.data.attempts.slice(-5000); State.save(); }
   function getAttempts() { return State.data.attempts.slice(); }
+  // -- served-question memory (repeat-free rotation) -----------------------
+  function markServed(ids) {
+    if (!Array.isArray(ids) || !ids.length) return;
+    const list = State.data.served.concat(ids.map(String));
+    State.data.served = list.slice(-800);
+    State.save();
+  }
+  function getServed() { return State.data.served.slice(); }
   function resetAll() { State.data = deepClone(DEFAULT_STATE); State.save(); }
   // -- unfinished session API ---------------------------------------------
   // A snapshot is the current in-memory quiz state. The store keeps one
@@ -98,5 +110,5 @@
     State.save();
   }
   // -----------------------------------------------------------------------
-  window.StateStore = { State, getSettings, setSettings, setUser, getUser, clearUser, recordSession, getSessions, recordAttempt, getAttempts, resetAll, deleteSession, uid, saveUnfinishedSnapshot, getUnfinished, removeUnfinished, clearUnfinished };
+  window.StateStore = { State, getSettings, setSettings, setUser, getUser, clearUser, recordSession, getSessions, recordAttempt, getAttempts, markServed, getServed, resetAll, deleteSession, uid, saveUnfinishedSnapshot, getUnfinished, removeUnfinished, clearUnfinished };
 })();
