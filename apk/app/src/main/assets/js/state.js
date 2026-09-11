@@ -96,9 +96,16 @@
       .sort(newestFirst);
   }
   function removeUnfinished(id) {
+    // Compare as strings: snapshot ids come from JSON and can round-trip as a
+    // number, and a strict !== comparison would then silently delete nothing.
+    const key = String(id);
     const before = State.data.unfinished.length;
-    State.data.unfinished = State.data.unfinished.filter(x => x.id !== id);
-    if (State.data.unfinished.length !== before) State.save();
+    State.data.unfinished = State.data.unfinished.filter(x => String(x.id) !== key);
+    const removed = State.data.unfinished.length !== before;
+    // Always persist: it also heals an in-memory copy that had drifted from
+    // what is on disk, so a discarded quiz can never come back after a reload.
+    State.save();
+    return removed;
   }
   function deleteSession(id) {
     const before = State.data.sessions.length;

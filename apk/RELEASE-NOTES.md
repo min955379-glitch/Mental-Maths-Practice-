@@ -1,5 +1,49 @@
 # Release Notes
 
+## v1.2.1 — Discard Quiz + quiz timer fixes
+
+**Release date:** 2026-09-11
+**File:** `apk/Mental-Maths-Practice.apk` (583 KB / 596,899 bytes, versionCode 5, versionName 1.2.1)
+**MD5:** `6f226f5acdcdd2dab7fbb55b906c3d4a`
+**SHA-256:** `6cfe1a1011693713b571327c611ff7d72b78465323aa38bbf59c87ff678c0633`
+**Signed with the original release key** (SHA-256 `2d7470c4a5239d5df72090f5b0329b99efd394a305c54464b2800cb1ae129d43`), verified v1 + v2 + v3 →
+installs as an in-place update over v1.2.0 / v1.1.1 and keeps every stat, session and unfinished quiz.
+
+### Discard Quiz now actually deletes
+
+- The confirmation dialog rebinds its buttons on every call, so a lost click
+  handler can no longer leave "Discard Quiz" dead.
+- The deletion is id-safe and always persisted, and the dashboard refreshes
+  into the live Continue Quiz container, so the quiz disappears immediately.
+- Discarding the quiz that is currently open stops its timer first, so it
+  cannot be re-saved a moment later.
+- Only the selected quiz goes: other unfinished quizzes, completed history,
+  attempts and all of your statistics are untouched, and the discarded quiz
+  does not come back after closing and reopening the app.
+
+### The quiz timer runs in every mode
+
+- It used to start only for countdown quizzes, so Quick / Full Test /
+  Category / Weak Areas / Mistake Review sat frozen at `00:00`. It now starts
+  the moment a quiz does and keeps running through every question and answer.
+- Timing is derived from monotonic clock deltas rather than counting timer
+  ticks, so it stays accurate when the WebView throttles timers, the device
+  lags, or a render is slow.
+- Per-question time is recorded on submit and on each transition; resuming
+  from Continue Quiz carries on from the saved time instead of resetting;
+  time while the quiz is closed is not counted.
+- Countdown modes keep their rules: they count down from the configured
+  limit, never go negative, and finish the quiz (and save the result) at zero.
+
+### Verification
+
+65/65 automated tests — `pwa` 14/14, `regressions` 15/15, `quiz-actions` 6/6,
+`content-difficulty` 15/15, `timer-discard` 15/15 — re-run against the assets
+extracted from this signed APK. Two older tests were found to be passing
+vacuously (comparing `0 === 0`) and were strengthened.
+
+---
+
 ## v1.2.0 — Content + difficulty release
 
 **Release date:** 2026-09-11

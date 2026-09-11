@@ -105,5 +105,17 @@
   function bestScore(mode) { const list = sessions().filter(s => !mode || s.mode === mode); if(list.length === 0) return null; return Math.max(...list.map(s => Math.round((s.correct/Math.max(1,s.count))*100))); }
   function formatTime(ms) { if(ms == null) return '-'; if(ms < 1000) return ms + ' ms'; return (ms/1000).toFixed(1) + ' sec'; }
   function formatMs(ms) { if(ms == null) return '-'; const s = Math.floor(ms/1000); const m = Math.floor(s/60); const rem = s%60; return String(m).padStart(2,'0') + ':' + String(rem).padStart(2,'0'); }
-  window.Stats = { totals, categoryStats, weakestCategories, performanceLabel, dailyStreak, questionsToday, recentSessions, bestScore, formatTime, formatMs, dayKey, attemptDay, difficultyStats, recentlySeenIds, recommendedDifficulty };
+  // Clock display for the quiz timer: 00:00 ... 59:59, then 1:00:00 and up,
+  // so anything over an hour still reads correctly instead of "75:30".
+  function formatClock(ms) {
+    if (ms == null || isNaN(ms)) return '00:00';
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const sec = total % 60;
+    const mm = String(m).padStart(2, '0');
+    const ss = String(sec).padStart(2, '0');
+    return h > 0 ? (h + ':' + mm + ':' + ss) : (mm + ':' + ss);
+  }
+  window.Stats = { totals, categoryStats, weakestCategories, performanceLabel, dailyStreak, questionsToday, recentSessions, bestScore, formatTime, formatMs, formatClock, dayKey, attemptDay, difficultyStats, recentlySeenIds, recommendedDifficulty };
 })();

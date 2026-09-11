@@ -159,17 +159,45 @@
   }
   function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
 
-  // How many countdown ticks between persistence writes (see _startTimer).
-  const SAVE_EVERY_TICKS = 5;
+  // ---------------------------------------------------------------------
+  // Timing
+  //
+  // Every duration is derived from monotonic clock deltas (performance.now),
+  // never from counting interval callbacks, so the clock stays accurate when
+  // the WebView throttles timers, the device lags, the screen sleeps, or a
+  // render takes longer than a tick. Banked values (elapsed / remaining /
+  // per-question) are persisted in the snapshot, so a paused or resumed quiz
+  // continues from the exact millisecond it stopped - and only time the quiz
+  // was actually open counts (see _endSegment).
+  // ---------------------------------------------------------------------
+  const clock = () => (typeof performance !== 'undefined' && performance.now)
+    ? performance.now()
+    : Date.now();
+  const TICK_MS = 250;          // display refresh; accuracy never depends on it
+  const SAVE_EVERY_MS = 5000;   // at most one persistence write per 5 seconds
   // Public flag used by quit() so the UI can tell "user left" from "finished".
   const QUIT_FLAG = '_quit';
 
   const Quiz = {
     current: null,
     index: 0,
-    startedAt: 0,
+    startedAt: 0,            // legacy: monotonic stamp of the active segment
     timerHandle: null,
-    remainingSec: 0,
+    // --- timing state -----------------------------------------------------
+    elapsedMs: 0,            // session time banked from previous segments
+    segmentStart: null,      // monotonic stamp when the open segment began
+    questionMs: 0,           // time banked on the current question
+    questionStart: null,     // monotonic stamp when the current question began
+    deadline: null,          // countdown only: monotonic stamp it runs out
+    remainingMs: 0,          // countdown only: ms left (authoritative paused)
+    _lastSaveAt: 0,
+    _timeoutFired: false,
+    // Live "seconds left" for countdown quizzes. Kept as a property so the
+    // rest of the app (and the persisted snapshot) keeps working unchanged.
+    get remainingSec() {
+      return this.isCountdown() ? Math.max(0, Math.ceil(this.remainingMsNow() / 1000)) : 0;
+    },
+    set remainingSec(v) { this.remainingMs = Math.max(0, Number(v) || 0) * 1000; },
     // per-question progress for the current session
     progress: null,
     onTick: null, onTimeout: null, onFeedback: null, onAdvance: null, onFinish: null,
@@ -177,11 +205,25 @@
     start(session) {
       this.current = session;
       this.index = 0;
-      this.startedAt = performance.now();
-      this.remainingSec = session.timeLimitSec || 0;
       this.progress = this._newProgress(session);
+      this._resetTiming(session);
       this._startTimer();
       this._saveSnapshot();
+    },
+    // Put the clock into a known state for a brand new session.
+    _resetTiming(session) {
+      this.elapsedMs = 0;
+      this.segmentStart = null;
+      this.questionMs = 0;
+      this.questionStart = null;
+      this.remainingMs = (session && session.timeLimitSec ? session.timeLimitSec : 0) * 1000;
+      this.deadline = null;
+      this._lastSaveAt = 0;
+      this._timeoutFired = false;
+      this._beginSegment();
+      this._resumeQuestion();
+      this.startedAt = clock();
+      if (this.remainingMs > 0) this.deadline = clock() + this.remainingMs;
     },
     // Resume a session that was previously saved as unfinished.
     resume(snapshot) {
@@ -200,10 +242,23 @@
         e.isCorrect = !!e.isCorrect;
         e.responseTimeMs = e.responseTimeMs || 0;
       }
-      this.startedAt = performance.now();
-      this.remainingSec = (snapshot.remainingSec != null)
-        ? snapshot.remainingSec
-        : (session.timeLimitSec || 0);
+      // --- restore the clock -------------------------------------------
+      // Banked values come from the snapshot, so a resumed quiz carries on
+      // from where it stopped instead of restarting at zero.
+      this.elapsedMs = Number(snapshot.elapsedMs) || 0;
+      this.segmentStart = null;
+      this.questionMs = Number(snapshot.questionElapsedMs) || 0;
+      this.questionStart = null;
+      const savedRemainingMs = (snapshot.remainingMs != null)
+        ? Number(snapshot.remainingMs)
+        : ((snapshot.remainingSec != null ? Number(snapshot.remainingSec) : (session.timeLimitSec || 0)) * 1000);
+      this.remainingMs = Math.max(0, savedRemainingMs || 0);
+      this._lastSaveAt = 0;
+      this._timeoutFired = false;
+      this._beginSegment();
+      this._resumeQuestion();
+      this.startedAt = clock();
+      if (this.remainingMs > 0) this.deadline = clock() + this.remainingMs;
       this._startTimer();
       // Re-save the snapshot immediately. The unfinished entry is NOT removed
       // here: if the user leaves straight after resuming (without answering
@@ -215,28 +270,71 @@
     _newProgress(session) {
       return { startedAt: new Date().toISOString(), entries: session.questionCache.map(() => ({ userAnswer: '', isCorrect: false, responseTimeMs: 0, hintsUsed: 0 })) };
     },
+    // --- clock helpers ---------------------------------------------------
+    isCountdown() { return !!(this.current && this.current.timeLimitSec); },
+    elapsedMsNow() { return this.elapsedMs + (this.segmentStart == null ? 0 : (clock() - this.segmentStart)); },
+    questionMsNow() { return this.questionMs + (this.questionStart == null ? 0 : (clock() - this.questionStart)); },
+    remainingMsNow() {
+      if (!this.isCountdown()) return 0;
+      if (this.deadline != null) return Math.max(0, this.deadline - clock());
+      return Math.max(0, this.remainingMs || 0);
+    },
+    // Open/close a timing segment. Closing banks the elapsed time so a
+    // paused or backgrounded quiz never counts time it was not running.
+    _beginSegment() { if (this.segmentStart == null) this.segmentStart = clock(); },
+    _endSegment() {
+      if (this.segmentStart != null) {
+        this.elapsedMs += Math.max(0, clock() - this.segmentStart);
+        this.segmentStart = null;
+      }
+      if (this.deadline != null) {
+        this.remainingMs = Math.max(0, this.deadline - clock());
+        this.deadline = null;
+      }
+    },
+    _resumeQuestion() { if (this.questionStart == null) this.questionStart = clock(); },
+    _endQuestion() {
+      if (this.questionStart != null) {
+        this.questionMs += Math.max(0, clock() - this.questionStart);
+        this.questionStart = null;
+      }
+    },
     _startTimer() {
       this.stopTimer();
-      this._ticksSinceSave = 0;
-      if (this.remainingSec) {
-        this.timerHandle = setInterval(() => {
-          this.remainingSec--;
-          if (this.onTick) this.onTick(this.remainingSec);
-          if (this.remainingSec <= 0) {
-            this.stopTimer();
-            if (this.onTimeout) this.onTimeout();
-          } else {
-            // Persist the countdown at most once every SAVE_EVERY_TICKS.
-            // A 10-minute quiz now writes ~120 times instead of 600, and
-            // pause() / quit() / submit() / next() always flush the exact
-            // remaining time before it can be needed.
-            this._ticksSinceSave++;
-            if (this._ticksSinceSave >= SAVE_EVERY_TICKS) {
-              this._ticksSinceSave = 0;
-              this._saveSnapshot();
-            }
-          }
-        }, 1000);
+      this._timeoutFired = false;
+      this._lastSaveAt = clock();
+      this.timerHandle = setInterval(() => this._tick(), TICK_MS);
+      this._tick();     // paint the first frame immediately
+    },
+    _tick() {
+      if (!this.current) return;
+      const elapsedMs = this.elapsedMsNow();
+      const remainingMs = this.remainingMsNow();
+      if (this.onTick) {
+        this.onTick({
+          elapsedMs: elapsedMs,
+          elapsedSec: Math.floor(elapsedMs / 1000),
+          remainingMs: remainingMs,
+          remainingSec: this.remainingSec,
+          questionMs: this.questionMsNow(),
+        });
+      }
+      if (this.isCountdown() && remainingMs <= 0) {
+        if (!this._timeoutFired) {
+          this._timeoutFired = true;
+          this.stopTimer();
+          this._endQuestion();
+          this._endSegment();
+          if (this.onTimeout) this.onTimeout();
+        }
+        return;
+      }
+      // Throttled persistence: at most one write every SAVE_EVERY_MS (a
+      // 10-minute quiz writes ~120 times, not 600). submit() / next() /
+      // pause() / quit() always flush the exact values before they are needed.
+      if (clock() - this._lastSaveAt >= SAVE_EVERY_MS) {
+        this._lastSaveAt = clock();
+        this._saveSnapshot();
       }
     },
     stopTimer() { if(this.timerHandle) clearInterval(this.timerHandle); this.timerHandle = null; },
@@ -255,8 +353,7 @@
       // graded as a wrong attempt, which corrupted accuracy, streaks and the
       // attempt history. Callers get null back and nothing is persisted.
       if (answer == null || String(answer).trim() === '') return null;
-      const now = performance.now();
-      const responseTimeMs = Math.max(0, Math.round(now - this.startedAt));
+      const responseTimeMs = Math.max(0, Math.round(this.questionMsNow()));
       const isCorrect = window.Normalize.compareAnswers(answer, q);
       const attempt = { id:StateStore.uid(), sessionId:this.current.id, userId:this.current.userId, questionId:q.id, questionText:q.question, category:q.category, difficulty:q.difficulty, userAnswer:answer, correctAnswer:q.correctAnswer, isCorrect, responseTimeMs, attemptedAt:new Date().toISOString(), _origin:q._origin || 'seed' };
       StateStore.recordAttempt(attempt);
@@ -270,6 +367,7 @@
         e.userAnswer = answer;
         e.isCorrect = isCorrect;
         e.responseTimeMs = responseTimeMs;
+        e.questionMs = responseTimeMs;
         e.attemptedAt = attempt.attemptedAt;
       }
       this._saveSnapshot();
@@ -277,19 +375,33 @@
       return attempt;
     },
     next() {
+      // Bank the time spent on the question we are leaving before moving on,
+      // so no timing information is lost when an answer is submitted.
+      this._endQuestion();
+      if (this.progress && this.progress.entries[this.index]) {
+        this.progress.entries[this.index].questionMs = Math.round(this.questionMs);
+      }
       this.index++;
-      this.startedAt = performance.now();
       if(this.index >= this.current.questionCache.length) {
         this.finish();
         return false;
       }
+      // Start timing the next question immediately.
+      this.questionMs = 0;
+      this.questionStart = null;
+      this._resumeQuestion();
       this._saveSnapshot();
       if(this.onAdvance) this.onAdvance();
       return true;
     },
     finish() {
       if (!this.current) return null;   // defensive: nothing to finish
+      this._endQuestion();
+      this._endSegment();
       this.stopTimer();
+      // Total time the quiz was actually open, alongside the existing
+      // totalResponseTimeMs (the sum of the per-answer response times).
+      this.current.elapsedMs = Math.round(this.elapsedMs);
       this.current.completedAt = new Date().toISOString();
       StateStore.recordSession(this.current);
       // Make absolutely sure it does not appear as unfinished.
@@ -307,6 +419,9 @@
       const snap = deepClone(this.current);
       snap.currentIndex = this.index;
       snap.remainingSec = this.remainingSec;
+      snap.remainingMs = this.isCountdown() ? Math.round(this.remainingMsNow()) : 0;
+      snap.elapsedMs = Math.round(this.elapsedMsNow());
+      snap.questionElapsedMs = Math.round(this.questionMsNow());
       snap.progress = this.progress ? deepClone(this.progress) : null;
       snap.lastSavedAt = new Date().toISOString();
       snap.completedAt = null;
@@ -318,6 +433,8 @@
     // session.completedAt === null and session._quit === true.
     quit() {
       if (!this.current) return null;
+      this._endQuestion();
+      this._endSegment();
       this._saveSnapshot();
       this.stopTimer();
       const session = this.current;
@@ -334,7 +451,8 @@
     // may fire into whatever screen is rendered next.
     pause() {
       if (!this.current) return null;
-      this._ticksSinceSave = 0;
+      this._endQuestion();
+      this._endSegment();
       const snap = this._saveSnapshot();
       this.stopTimer();
       this.current = null;

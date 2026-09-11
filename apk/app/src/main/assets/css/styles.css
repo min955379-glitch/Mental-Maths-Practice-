@@ -354,13 +354,18 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--c-indigo
 .modal-backdrop {
   position: fixed; inset: 0; z-index: 120;
   display: flex; align-items: center; justify-content: center;
-  padding: 20px; background: rgba(8, 14, 34, 0.55);
+  /* A tall dialog on a small phone must be scrollable, otherwise the action
+     buttons sit outside the viewport and taps appear to do nothing. */
+  overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding: 20px; padding-bottom: max(20px, env(safe-area-inset-bottom));
+  background: rgba(8, 14, 34, 0.55);
   opacity: 0; transition: opacity 160ms ease;
 }
 .modal-backdrop.show { opacity: 1; }
 .modal-backdrop[hidden] { display: none; }
 .modal {
   width: 100%; max-width: 420px; padding: 22px;
+  max-height: 100%; overflow-y: auto;
   background: var(--c-surface); border: 1px solid var(--c-border);
   border-radius: var(--radius-lg); box-shadow: var(--shadow-lg, 0 18px 40px rgba(8, 14, 34, 0.28));
   transform: translateY(8px) scale(0.98); transition: transform 180ms ease;
@@ -375,7 +380,7 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--c-indigo
 .modal-title { margin: 0 0 6px; font-size: 18px; font-weight: 700; }
 .modal-text { margin: 0 0 18px; font-size: 14px; line-height: 1.55; color: var(--c-text-muted); }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
-.modal-actions .btn { min-width: 120px; }
+.modal-actions .btn { min-width: 120px; min-height: 44px; }
 @media (max-width: 420px) {
   .modal-actions { flex-direction: column-reverse; }
   .modal-actions .btn { width: 100%; }

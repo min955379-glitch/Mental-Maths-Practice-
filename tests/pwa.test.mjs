@@ -309,21 +309,31 @@ await test('8. Continue Quiz resumes at the exact question with every answer pre
 
 await test('9. Timed quizzes keep their remaining countdown across a pause and resume', async () => {
   const dom = makeApp();
-  go(dom, '#/timed');
-  const total = dom.window.QuizEngine.Quiz.current.timeLimitSec;
+  const win = dom.window;
+  // Navigate by hash only and wait: routing by hand as well makes jsdom's
+  // queued hashchange re-route (and pause) the quiz before we can measure it.
+  win.location.hash = '#/timed';
+  await sleep(150);
+  const total = win.QuizEngine.Quiz.current.timeLimitSec;
   eq(total, 600, 'timed quiz should be 10 minutes');
+  const sessionId = String(win.QuizEngine.Quiz.current.id);
   answerCorrectly(dom, 1);
   await sleep(1200); // let the countdown tick
-  const leftBefore = dom.window.QuizEngine.Quiz.remainingSec;
-  assert(leftBefore < total, 'countdown did not run');
+  const leftBefore = win.QuizEngine.Quiz.remainingSec;
+  assert(leftBefore > 0 && leftBefore < total, `countdown did not run (${leftBefore})`);
 
-  go(dom, '#/dashboard'); // user leaves
-  const saved = dom.window.StateStore.getUnfinished()[0];
-  eq(saved.remainingSec, leftBefore, 'remaining time was not saved');
+  win.location.hash = '#/dashboard'; // user leaves
+  await sleep(150);
+  const saved = win.StateStore.getUnfinished().find((x) => String(x.id) === sessionId);
+  assert(saved, 'the paused countdown quiz was not saved as unfinished');
+  // The clock is timestamp-based now, so allow a one-second rounding step.
+  assert(Math.abs(saved.remainingSec - leftBefore) <= 1, `remaining time was not saved (${saved.remainingSec} vs ${leftBefore})`);
 
-  go(dom, `#/resume?id=${saved.id}`);
-  const remaining = dom.window.QuizEngine.Quiz.remainingSec;
-  assert(remaining <= leftBefore && remaining > leftBefore - 5, `timer not restored (${remaining} vs ${leftBefore})`);
+  win.location.hash = `#/resume?id=${saved.id}`;
+  await sleep(150);
+  const remaining = win.QuizEngine.Quiz.remainingSec;
+  assert(remaining > 0, 'the resumed quiz lost its countdown');
+  assert(remaining <= leftBefore + 1 && remaining > leftBefore - 5, `timer not restored (${remaining} vs ${leftBefore})`);
   dom.window.close();
 });
 

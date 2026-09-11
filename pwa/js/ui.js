@@ -36,8 +36,6 @@
     }
     if (!confirmWired) {
       confirmWired = true;
-      document.getElementById('confirmOk').addEventListener('click', () => closeConfirm(true));
-      document.getElementById('confirmCancel').addEventListener('click', () => closeConfirm(false));
       modal.addEventListener('click', (ev) => { if (ev.target === modal) closeConfirm(false); });
       document.addEventListener('keydown', (ev) => {
         if (ev.key === 'Escape' && !modal.hidden) closeConfirm(false);
@@ -46,8 +44,13 @@
     const box = modal.querySelector('.modal');
     document.getElementById('confirmTitle').textContent = opts.title || 'Are you sure?';
     document.getElementById('confirmMessage').textContent = opts.message || '';
-    const ok = document.getElementById('confirmOk');
-    const cancel = document.getElementById('confirmCancel');
+    // Rebind the two buttons on every call by replacing them with fresh nodes.
+    // A listener attached only once is lost if the markup is ever re-created,
+    // and the click silently does nothing - which is exactly how the Discard
+    // button used to fail. Cloning also makes duplicate handlers impossible.
+    const ok = rebindButton('confirmOk', () => closeConfirm(true));
+    const cancel = rebindButton('confirmCancel', () => closeConfirm(false));
+    if (!ok || !cancel) { console.warn('confirmDialog: modal buttons are missing'); }
     ok.textContent = opts.confirmLabel || 'Confirm';
     cancel.textContent = opts.cancelLabel || 'Cancel';
     ok.className = 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary');
@@ -58,6 +61,16 @@
     raf(() => modal.classList.add('show'));
     try { ok.focus(); } catch (e) { /* focus is best-effort */ }
     return new Promise((resolve) => { confirmResolver = resolve; });
+  }
+
+  // Replace a button with a fresh clone carrying exactly one click handler.
+  function rebindButton(id, handler) {
+    const old = document.getElementById(id);
+    if (!old || !old.parentNode) return null;
+    const fresh = old.cloneNode(true);
+    fresh.addEventListener('click', handler);
+    old.parentNode.replaceChild(fresh, old);
+    return fresh;
   }
 
   function closeConfirm(result) {
@@ -100,6 +113,33 @@
     let base = map[s.mode] || 'Practice';
     if(s.category) base += ' - ' + s.category;
     return base;
+  }
+
+  // Permanently delete one unfinished quiz and refresh whatever is on screen.
+  // The deletion is real (persisted storage), it never touches completed
+  // history or the user's statistics, and it only ever removes the one
+  // session whose id it was given.
+  function discardUnfinished(id) {
+    const key = String(id);
+    const engine = window.QuizEngine && window.QuizEngine.Quiz;
+    // If the discarded session is the one running right now, stop it first so
+    // a stray tick cannot re-save it a moment after we delete it.
+    if (engine && engine.current && String(engine.current.id) === key) {
+      try { engine.stopTimer(); } catch (e) { /* ignore */ }
+      engine.current = null;
+      engine.progress = null;
+      if (typeof engine._detachCallbacks === 'function') engine._detachCallbacks();
+    }
+    StateStore.removeUnfinished(key);
+    // Re-render into the LIVE host: the node captured when the card was built
+    // can be stale if the dashboard was rendered again afterwards, and a
+    // re-render into a detached node would look like "nothing happened".
+    const liveHost = document.getElementById('continueQuizHost');
+    if (liveHost) renderContinueQuiz(liveHost);
+    else route('/dashboard');
+    const section = document.getElementById('continueSection');
+    if (section) section.hidden = (StateStore.getUnfinished().length === 0);
+    showToast('Quiz discarded.', 'success');
   }
 
   // -- Continue Quiz card ---------------------------------------------------
@@ -165,9 +205,8 @@
           cancelLabel: 'Keep It',
           danger: true,
         }).then((yes) => {
-          if (!yes) return;
-          StateStore.removeUnfinished(snap.id);
-          renderContinueQuiz(host);
+          if (!yes) return;      // "Keep It": close and change nothing
+          discardUnfinished(snap.id);
         });
       }}, 'Discard');
       actions.appendChild(discardBtn);
@@ -377,7 +416,25 @@
     const settings = StateStore.getSettings();
     const timerWrap = document.getElementById('qTimer');
     const showTimer = session.timeLimitSec || settings.timerInPractice;
-    if (showTimer) { timerWrap.hidden = false; if(session.timeLimitSec) document.getElementById('qTimerText').textContent = Stats.formatMs(session.timeLimitSec*1000); else document.getElementById('qTimerText').textContent = '00:00'; }
+    // One painter for both kinds of quiz: countdown quizzes show the time
+    // left, every other mode shows the elapsed session time. Both are read
+    // from the engine's timestamp clock, so the value is correct the moment
+    // the screen appears (including right after a resume).
+    function paintTimer() {
+      const t = document.getElementById('qTimerText');
+      if (!t) return;
+      const eng = window.QuizEngine.Quiz;
+      const wrap = document.getElementById('qTimer');
+      if (eng.isCountdown && eng.isCountdown()) {
+        const sec = eng.remainingSec;
+        t.textContent = Stats.formatClock(sec * 1000);
+        if (wrap) wrap.classList.toggle('warn', sec <= 30);
+      } else {
+        t.textContent = Stats.formatClock(eng.elapsedMsNow());
+        if (wrap) wrap.classList.remove('warn');
+      }
+    }
+    if (showTimer) { timerWrap.hidden = false; paintTimer(); }
     const q = session.questionCache[index];
     document.getElementById('qCategory').textContent = q.category; document.getElementById('qText').textContent = q.question;
     const diffEl = document.getElementById('qDifficulty');
@@ -450,7 +507,7 @@
       };
     }
 
-    window.QuizEngine.Quiz.onTick = (sec) => { const t = document.getElementById('qTimerText'); if(!t) return; t.textContent = Stats.formatMs(sec*1000); const wrap = document.getElementById('qTimer'); if(wrap) wrap.classList.toggle('warn', sec <= 30); };
+    window.QuizEngine.Quiz.onTick = () => paintTimer();
     window.QuizEngine.Quiz.onTimeout = () => { showToast('Time is up. Submitting final answers.', 'error'); window.QuizEngine.Quiz.finish(); };
     window.QuizEngine.Quiz.onFeedback = (attempt, q) => { showFeedback(attempt, q, session); };
     window.QuizEngine.Quiz.onAdvance = () => { const i = window.QuizEngine.Quiz.index; const s = window.QuizEngine.Quiz.current; renderQuizScreen(main, s, i); };

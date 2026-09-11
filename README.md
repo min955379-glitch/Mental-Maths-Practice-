@@ -3,9 +3,9 @@
 A complete, polished, production-quality mental-math training platform for
 ISCSP exam preparation.
 
-> **Latest release — v1.2.0 (2026-09-11).** Signed Android APK:
-> [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 579 KB,
-> versionCode 4, signed with the release key (v1 + v2 + v3 verified). It
+> **Latest release — v1.2.1 (2026-09-11).** Signed Android APK:
+> [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 583 KB,
+> versionCode 5, signed with the release key (v1 + v2 + v3 verified). It
 > installs as an in-place update over earlier builds and keeps your progress.
 > **v1.2.0 is the content + difficulty release:** **1,130 original questions**
 > across all 18 categories (50+ per category, split Easy / Medium / Hard by
@@ -24,7 +24,7 @@ ISCSP exam preparation.
 ```
 .
 ├── apk/
-│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.2.0 (579 KB)
+│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.2.1 (583 KB)
 │   ├── app/                          # Android project (Java + WebView wrapper)
 │   │   └── src/main/assets/          # PWA bundled inside the APK (file:///android_asset/)
 │   ├── gradle/wrapper/               # Gradle wrapper
@@ -73,11 +73,11 @@ With a computer and USB debugging enabled: `adb install -r Mental-Maths-Practice
 | What | Value |
 |---|---|
 | Package | `com.iscsp.mentalmatharena` |
-| Version | versionCode 4 · versionName 1.2.0 |
-| Size | 579 KB (592,803 bytes) |
+| Version | versionCode 5 · versionName 1.2.1 |
+| Size | 583 KB (596,899 bytes) |
 | Min / target SDK | 21 (Android 5.0) / 34 (Android 14) |
 | Signature | v1 + v2 + v3, release key SHA-256 `2d7470c4a5239d5d…` |
-| MD5 | `10f74510567122be80501c6aca04ae5e` |
+| MD5 | `6f226f5acdcdd2dab7fbb55b906c3d4a` |
 
 ## Live progress log
 
@@ -317,6 +317,7 @@ node tests/pwa.test.mjs              # 14 end-to-end scenarios
 node tests/regressions.test.mjs      # 15 regression scenarios for the bugs in BUGS.md
 node tests/quiz-actions.test.mjs     # 6 scenarios for the quiz action bar + Quit dialog
 node tests/content-difficulty.test.mjs  # 15 scenarios for the question bank + chooser
+node tests/timer-discard.test.mjs     # 15 scenarios for the quiz timer + discarding a quiz
 APP_DIR=/path/to/assets node tests/pwa.test.mjs   # test a built bundle (e.g. an APK's assets/)
 ```
 
@@ -459,7 +460,51 @@ spread.
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 592,803 bytes (579 KB),
 `versionCode 4`, `versionName 1.2.0`, minSdk 21 / targetSdk 34, signed
 v1 + v2 + v3 with the same release key (cert SHA-256 `2d7470c4…`),
-MD5 `10f74510567122be80501c6aca04ae5e`.
+MD5 `6f226f5acdcdd2dab7fbb55b906c3d4a`.
+
+### Step 21 — v1.2.1: Discard Quiz and the quiz timer actually work
+
+Two functional bugs, both fixed at the source and covered by 15 new tests.
+
+**Discard Quiz (`ui.js`, `state.js`)**
+- The button deleted nothing because the confirmation modal bound its OK
+  button exactly once; if that listener was ever lost the promise never
+  settled and the click did nothing. The dialog now rebinds both buttons on
+  every call (fresh clones, so no duplicates), which also makes a dead modal
+  impossible.
+- The deletion itself is now id-safe (`String(id)` on both sides) and always
+  persists, and it re-renders into the **live** Continue Quiz host instead of
+  a captured node that may have been detached by a later render — the reason
+  a discarded quiz could look like it was still there.
+- If the discarded quiz is the one currently open, the engine is stopped
+  first so a stray tick cannot re-save it. Completed history, attempts and
+  statistics are never touched, and only the selected quiz is removed.
+
+**Quiz timer (`quiz.js`, `stats.js`)**
+- The clock only ran in countdown modes: `_startTimer()` started an interval
+  **only** when a time limit existed, so every practice mode showed a frozen
+  `00:00`. It now always runs.
+- Timing is derived from **monotonic clock deltas** (`performance.now`), not
+  from counting interval callbacks, so it stays accurate when the WebView
+  throttles timers, the device lags, or a render is slow. Countdowns use an
+  absolute deadline; elapsed modes bank time into the snapshot.
+- Per-question time is banked on submit and on every transition, so no timing
+  is lost between questions; resuming continues from the persisted values
+  instead of restarting at zero; time while the quiz is closed is not counted.
+- Persistence stays throttled to one write per 5 seconds, and the display
+  uses a new `Stats.formatClock` that also handles durations over an hour
+  (`1:05:00`).
+
+**Verification** — 65/65 across five suites: `pwa` 14/14, `regressions` 15/15,
+`quiz-actions` 6/6, `content-difficulty` 15/15, `timer-discard` 15/15; the same
+65/65 was re-run against the `assets/` extracted from the finished APK. Two
+pre-existing tests (the timed pause/resume test and the throttled-write test)
+were strengthened — they were passing vacuously on `0 === 0` because the
+harness paused the quiz before the assertions ran.
+
+**Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 596,899 bytes (583 KB),
+`versionCode 5`, `versionName 1.2.1`, minSdk 21 / targetSdk 34, signed
+v1 + v2 + v3 with the same release key.
 
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 519,003 bytes (507 KB),
 `versionCode 3`, `versionName 1.1.1`, minSdk 21 / targetSdk 34, signed

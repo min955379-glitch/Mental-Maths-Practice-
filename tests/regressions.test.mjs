@@ -119,7 +119,8 @@ await test('R2. finish() / pause() / quit() are safe with no active session (no 
 await test('R3. Countdown persistence is throttled, but pause() still flushes the exact time', async () => {
   const dom = makeApp();
   const win = dom.window;
-  go(dom, '#/timed');
+  win.location.hash = '#/timed';
+  await sleep(150);   // let the app route once and start the countdown
 
   let writes = 0;
   const realSetItem = win.localStorage.setItem.bind(win.localStorage);
@@ -129,9 +130,13 @@ await test('R3. Countdown persistence is throttled, but pause() still flushes th
   assert(writes <= 2, `timer wrote localStorage ${writes} times in ~6 ticks (expected <= 2)`);
 
   const leftBefore = win.QuizEngine.Quiz.remainingSec;
-  go(dom, '#/dashboard');
-  const saved = win.StateStore.getUnfinished()[0];
-  eq(saved.remainingSec, leftBefore, 'pause() did not flush the exact remaining time');
+  assert(leftBefore > 0, 'the countdown must be running for this test to mean anything');
+  const sessionId = String(win.QuizEngine.Quiz.current.id);
+  win.location.hash = '#/dashboard';
+  await sleep(150);
+  const saved = win.StateStore.getUnfinished().find((x) => String(x.id) === sessionId);
+  assert(saved, 'the paused quiz was not saved');
+  assert(Math.abs(saved.remainingSec - leftBefore) <= 1, `pause() did not flush the remaining time (${saved.remainingSec} vs ${leftBefore})`);
   dom.window.close();
 });
 

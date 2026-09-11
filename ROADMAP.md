@@ -2,9 +2,9 @@
 
 **App:** Mental Maths Practice (ISCSP exam preparation)
 **Repo:** [min955379-glitch/Mental-Maths-Practice-](https://github.com/min955379-glitch/Mental-Maths-Practice-)
-**Latest release:** **v1.2.0** (2026-09-11) — `apk/Mental-Maths-Practice.apk`, 579 KB, signed v1+v2+v3
-**Package:** `com.iscsp.mentalmatharena` (versionCode 4) · **PWA cache:** `iscsp-mm-v8`
-**Last reviewed:** v1.2.0 content + difficulty release — 1,130 verified questions, difficulty chooser, reworked quiz action bar
+**Latest release:** **v1.2.1** (2026-09-11) — `apk/Mental-Maths-Practice.apk`, 583 KB, signed v1+v2+v3
+**Package:** `com.iscsp.mentalmatharena` (versionCode 5) · **PWA cache:** `iscsp-mm-v8`
+**Last reviewed:** v1.2.1 — Discard Quiz really deletes, and the quiz timer runs in every mode on a timestamp clock
 
 ---
 
@@ -13,11 +13,11 @@
 | Path | Status | What it is |
 |---|---|---|
 | `pwa/` | **ACTIVE / shipping** | The app itself: self-contained progressive web app — no build step, no backend, works offline, installable, and bundled into the Android APK. **All new features land here.** |
-| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.2.0, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
+| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.2.1, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
 | `apk/build.sh` | ACTIVE | Gradle rebuild: syncs `pwa/` → assets, `gradle assembleRelease`, signs with `release.keystore`. |
 | `apk/build-offline.sh` | ACTIVE | Gradle-free rebuild straight from the SDK tools (aapt2 → javac → d8 → zipalign → apksigner). This is how v1.1.0 was produced. |
 | `tools/question_bank/` | ACTIVE | Deterministic Python bank generator: 345 question families → 1,080 machine-verified questions across 18 categories (see `VALIDATION.md`). |
-| `tests/` | ACTIVE | JSDOM suites driving the real app: `pwa.test.mjs` (14 end-to-end scenarios) + `regressions.test.mjs` (15 regression scenarios) + `quiz-actions.test.mjs` (6 action-bar scenarios) + `content-difficulty.test.mjs` (15 bank/chooser scenarios) + a 1,555-question hint sweep. |
+| `tests/` | ACTIVE | JSDOM suites driving the real app: `pwa.test.mjs` (14 end-to-end scenarios) + `regressions.test.mjs` (15 regression scenarios) + `quiz-actions.test.mjs` (6 action-bar scenarios) + `content-difficulty.test.mjs` (15 bank/chooser scenarios) + `timer-discard.test.mjs` (15 timer/discard scenarios) + a 1,555-question hint sweep. |
 | `backend/` | PRESERVED (legacy) | Node + Express + Prisma (SQLite) API from the earlier full-stack iteration — the starting point if cloud sync ever lands. |
 | `frontend/` | PRESERVED (legacy) | React 18 + Vite + TypeScript SPA from the earlier iteration; needs the backend running, not used by the shipping app. |
 
@@ -141,6 +141,35 @@ byte-identical to `pwa/`.
 `content-difficulty` (15); **50/50 again against the `assets/` extracted from the
 finished APK**.
 
+### 1.10 v1.2.1 — Discard Quiz + quiz timer (2026-09-11)
+
+**Discard Quiz**
+- [x] The confirmation modal rebinds its OK/Cancel buttons on every call, so a
+  lost listener can no longer leave the button dead
+- [x] Deletion is id-safe and always persisted; the dashboard re-renders into
+  the live Continue Quiz host (a captured, detached node made it look inert)
+- [x] Discarding the quiz that is currently open stops the engine first, so a
+  stray tick cannot re-save it
+- [x] Only the selected quiz is removed — other unfinished quizzes, completed
+  history, attempts and all statistics are untouched, and it stays gone after
+  a reload
+
+**Quiz timer**
+- [x] Ran only in countdown modes; it now runs in **every** mode (`_startTimer`
+  used to bail out unless a time limit existed)
+- [x] Rewritten on monotonic timestamp deltas — no drift when the WebView
+  throttles timers, the device lags or a render is slow
+- [x] Countdowns use an absolute deadline; elapsed modes bank time into the
+  snapshot, so a resume continues instead of resetting to `00:00`
+- [x] Per-question time banked on submit and on every transition; time while
+  the quiz is closed is not counted
+- [x] Persistence still throttled to one write per 5 seconds; `Stats.formatClock`
+  handles durations over an hour
+
+**Verification** — 65/65 across five suites (adds `timer-discard`, 15), re-run
+against the assets extracted from the finished APK. Two older tests that were
+passing vacuously (`0 === 0`) were strengthened.
+
 ---
 
 ## 2. In progress / next up
@@ -191,6 +220,7 @@ finished APK**.
 
 | Version | Date | Highlights | File |
 |---|---|---|---|
+| **v1.2.1** | 2026-09-11 | Discard Quiz really deletes the selected unfinished quiz (id-safe, persisted, live dashboard refresh, gone after reload) and the quiz timer works in every mode on a monotonic timestamp clock (runs across questions, resumes correctly, countdowns still finish the quiz); 15 new timer/discard tests | `apk/Mental-Maths-Practice.apk` |
 | **v1.2.0** | 2026-09-11 | Content + difficulty release: **1,130 verified questions** (60 per category × 18, 20/20/20 Easy/Medium/Hard), **EASY · MEDIUM · HARD chooser before every quiz** with per-difficulty accuracy + adaptive recommendation, generators for every category, rotation without repeats, reworked quiz action bar (Submit primary right, Hint \| Quit below) and an **in-app Quit modal** replacing `confirm()`; 50/50 tests | `apk/Mental-Maths-Practice.apk` |
 | **v1.1.1** | 2026-09-10 | Bug-review release: blank answers no longer graded wrong, null-safe `finish()`, throttled countdown persistence, local-time streaks, Expert question generation, CSP + credential/keystore hardening, 15 new regression tests | `apk/Mental-Maths-Practice.apk` |
 | **v1.1.0** | 2026-09-10 | Hint button fixed (question-specific hints, answer-safety guard); Continue Quiz with full save/resume; History and state bugs fixed; APK rebuilt at 515 KB with the Gradle-free pipeline | `apk/Mental-Maths-Practice.apk` |
@@ -224,6 +254,7 @@ node tests/pwa.test.mjs            # 14 end-to-end scenarios
 node tests/regressions.test.mjs    # 15 regression scenarios (BUGS.md fixes)
 node tests/quiz-actions.test.mjs   # 6 quiz action-bar + Quit dialog scenarios
 node tests/content-difficulty.test.mjs  # 15 question-bank + difficulty chooser scenarios
+node tests/timer-discard.test.mjs      # 15 quiz timer + discard scenarios (uses real wall-clock time)
 
 # 2. Point the same suites at any built bundle (e.g. assets extracted from an APK)
 APP_DIR=/path/to/extracted/assets node tests/pwa.test.mjs
