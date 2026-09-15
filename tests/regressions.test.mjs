@@ -13,7 +13,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { webcrypto } from 'node:crypto';
+import { TextEncoder as NodeTextEncoder, TextDecoder as NodeTextDecoder } from 'node:util';
 import { JSDOM } from 'jsdom';
+
+if (typeof globalThis.TextEncoder === 'undefined') globalThis.TextEncoder = NodeTextEncoder;
+if (typeof globalThis.TextDecoder === 'undefined') globalThis.TextDecoder = NodeTextDecoder;
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -30,6 +34,11 @@ function makeApp(seedStorage) {
     pretendToBeVisual: true,
   });
   const win = dom.window;
+  // jsdom ships no TextEncoder / TextDecoder on the window; auth.js calls
+  // `new TextEncoder().encode(password)` before subtle.digest(). Provide
+  // Node's implementation through the JSDOM window so registration works.
+  win.TextEncoder = NodeTextEncoder;
+  win.TextDecoder = NodeTextDecoder;
   win.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
   win.confirm = () => (win.__confirmAnswer !== undefined ? win.__confirmAnswer : true);
   win.scrollTo = () => {};

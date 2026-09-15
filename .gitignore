@@ -21,3 +21,6 @@ apk/app/release/
 apk/*.apk.idsig
 tests/node_modules
 apk/build-offline/
+tests/node_modules/
+tests/package-lock.json
+tools/question_bank/__pycache__/

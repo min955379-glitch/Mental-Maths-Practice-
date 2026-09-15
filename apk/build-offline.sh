@@ -27,6 +27,12 @@ cd "$(dirname "$0")"
 : "${JAVA_HOME:?JAVA_HOME must point at a JDK 17 installation}"
 : "${ANDROID_HOME:?ANDROID_HOME must point at the Android SDK}"
 
+# The `apksigner` shell wrapper does `exec java` and resolves `java` against
+# $PATH, NOT $JAVA_HOME. The system often ships an older JDK (11 lacks the
+# HmacPBESHA256 Mac provider that build-tools 34.0.0 apksigner needs to load
+# the project's PKCS12 keystore), so put the requested JDK 17 ahead of it.
+export PATH="$JAVA_HOME/bin:$PATH"
+
 BT="$ANDROID_HOME/build-tools/34.0.0"
 PLATFORM="$ANDROID_HOME/platforms/android-34/android.jar"
 AAPT2="$BT/aapt2"
@@ -120,10 +126,15 @@ export KS_ALIAS="${KS_ALIAS:-iscspmatharena}"
 # 8. Sign with the existing release key (same key => installs as an update)
 echo "Signing ..."
 rm -f Mental-Maths-Practice.apk
+# Pass the password via "pass:KS_PASS" rather than "env:KS_PASS" — apksigner's
+# env: reader does not call the PKCS12 HmacPBESHA256 algorithm the way keytool
+# does, so an empty env yields "Integrity check failed: HmacPBESHA256 not
+# available" instead of a clean BadPasswordException. pass:KS_PASS bypasses
+# the env lookup and feeds the keystore its real password.
 "$APKSIGNER" sign \
   --ks release.keystore \
-  --ks-pass env:KS_PASS \
-  --key-pass env:KS_PASS \
+  --ks-pass "pass:${KS_PASS}" \
+  --key-pass "pass:${KS_PASS}" \
   --ks-key-alias "${KS_ALIAS:-iscspmatharena}" \
   --out Mental-Maths-Practice.apk \
   "$OUT/app-unsigned.apk"
