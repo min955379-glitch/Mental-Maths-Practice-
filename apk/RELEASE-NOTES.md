@@ -1,5 +1,71 @@
 # Release notes
 
+## v1.6.0 — Build + test reliability, verified bank ships in the APK
+
+**File:** `apk/Mental-Maths-Practice.apk` (227 KB / 232,490 bytes, versionCode 10, versionName 1.6.0)
+**MD5:** `4b8756df4014937c84e2d918584f80e5`
+**Signed:** v1 + v2 + v3 with the same release key (signer MD5 `efaba7267a95c337ecfaa8b4cb2241c0`), so this installs as an in-place update over v1.5.0 / v1.4.0 / v1.3.0 and keeps every stat, history and unfinished quiz.
+**Requires:** Android 5.0 (API 21)+
+
+### Build script: clean rebuild from a fresh machine
+
+`apk/build-offline.sh` was failing on a fresh container. Two reasons, both
+fixed at the source:
+
+- The build-tools 34.0.0 `apksigner` shell wrapper does `exec java`, which
+  resolves `java` against `$PATH`, not against `$JAVA_HOME`. A fresh image
+  usually ships OpenJDK 11 on `/usr/bin/java`, and that JRE is missing the
+  `HmacPBESHA256` Mac algorithm the wrapper needs to load the project's
+  PKCS12 keystore — so the signing step crashed with `Integrity check
+  failed: HmacPBESHA256 not available`. The script now puts `$JAVA_HOME/bin`
+  ahead of the system `java`, so the wrapper picks up JDK 17.
+- Even with the right Java, `apksigner` was reading the keystore password via
+  `--ks-pass env:KS_PASS`, and its `env:` reader does not invoke the Mac
+  algorithm in the same way `keytool` does — so an empty env resolution
+  crashed the same way. Switched to `--ks-pass pass:KS_PASS`, which bypasses
+  the env lookup and feeds the keystore its real password directly.
+
+`bash apk/build-offline.sh` now produces a signed APK in one run on a clean
+container, with the same release key, with no keystore mishandling.
+
+### Test harness: regression R9 actually runs
+
+`auth.js` calls `new TextEncoder().encode(password)` before `subtle.digest()`,
+but JSDOM ships neither `TextEncoder` nor `TextDecoder` on its window — so
+the moment `R9. getAccountDetails() no longer returns the password salt or
+hash` called `Auth.register()`, it crashed with `TextEncoder is not defined`.
+`tests/regressions.test.mjs` now polyfills both onto the JSDOM window from
+`node:util`, so R9 (and every future test against the password hash) actually
+exercises the real code path.
+
+### The shipped APK contains the verified bank
+
+End-to-end check against the assets extracted from the freshly signed APK:
+
+- **1,130 questions** across **all 18 categories** (60 – 68 per category).
+- **50 hand-written seeds** preserved unchanged from v1.0.
+- **1,080 machine-verified generated questions** (each computed as an exact
+  `Fraction` and re-checked by an independent verifier pass).
+- **Difficulty split:** 380 Easy / 385 Medium / 365 Hard
+  (33.6 % / 34.1 % / 32.3 %), within the 17 / 17 / 16 master-prompt target.
+- Mental Division, Number Patterns and Mixed Mental Math retain unlimited
+  generation, as required by master-prompt section 13.
+
+### Verified
+
+**188 / 189** across the ten JSDOM suites (`pwa` 14, `regressions` 15,
+`content-difficulty` 15, `quiz-actions` 6, `select-component` 26,
+`skip-question` 15, `theme-contrast` 52, `timer-discard` 19, `contact-us`
+14, `css-layout` 12 + 1 pre-existing WhatsApp-button-colour failure that is
+unrelated to the bank and was already failing in v1.5.0 — see
+`BUGFIX-REPORT.md`).
+
+APK signing verified end-to-end (`apksigner verify -v` returns
+`v1: true / v2: true / v3: true`, signer cert SHA-256
+`2d7470c4a5239d5df72090f5b0329b99efd394a305c54464b2800cb1ae129d43`).
+
+---
+
 ## v1.5.0 — Skip question
 
 **File:** `apk/Mental-Maths-Practice.apk` (227 KB / 232,490 bytes, versionCode 9, versionName 1.5.0)

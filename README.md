@@ -3,10 +3,11 @@
 A complete, polished, production-quality mental-math training platform for
 ISCSP exam preparation.
 
-> **Latest release — v1.5.0 (2026-09-15).** Signed Android APK:
-> [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 583 KB,
-> versionCode 9, signed with the release key (v1 + v2 + v3 verified). It
-> installs as an in-place update over earlier builds and keeps your progress.
+> **Latest release — v1.6.0 (2026-09-15).** Signed Android APK:
+> [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 227 KB
+> (232,490 bytes), versionCode 10, signed with the release key (v1 + v2 +
+> v3 verified). Installs as an in-place update over every earlier build and
+> keeps all of your progress, stats, history and unfinished quizzes.
 > **v1.2.0 is the content + difficulty release:** **1,130 original questions**
 > across all 18 categories (50+ per category, split Easy / Medium / Hard by
 > reasoning depth, not digit count), a new **EASY · MEDIUM · HARD chooser
@@ -24,7 +25,7 @@ ISCSP exam preparation.
 ```
 .
 ├── apk/
-│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.5.0 (227 KB)
+│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.6.0 (227 KB)
 │   ├── app/                          # Android project (Java + WebView wrapper)
 │   │   └── src/main/assets/          # PWA bundled inside the APK (file:///android_asset/)
 │   ├── gradle/wrapper/               # Gradle wrapper
@@ -73,11 +74,11 @@ With a computer and USB debugging enabled: `adb install -r Mental-Maths-Practice
 | What | Value |
 |---|---|
 | Package | `com.iscsp.mentalmatharena` |
-| Version | versionCode 9 · versionName 1.5.0 |
+| Version | versionCode 10 · versionName 1.6.0 |
 | Size | 227 KB (232,490 bytes) |
 | Min / target SDK | 21 (Android 5.0) / 34 (Android 14) |
 | Signature | v1 + v2 + v3, release key SHA-256 `2d7470c4a5239d5d…` |
-| MD5 | `c6e11c06d760fa67c45afecd0772f3a2` |
+| MD5 | `4b8756df4014937c84e2d918584f80e5` |
 
 ## Live progress log
 
@@ -721,6 +722,66 @@ from the finished APK.
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 232,490 bytes (227 KB),
 `versionCode 9`, `versionName 1.5.0`, minSdk 21 / targetSdk 34, signed
 v1 + v2 + v3 with the same release key, MD5 `c6e11c06d760fa67c45afecd0772f3a2`.
+
+### Step 26 — v1.6.0: build + test reliability, and the APK ships the verified bank
+
+The v1.5.0 APK was built and signed correctly, but two pre-existing issues
+got in the way of clean rebuilds and a clean test run. Both are fixed at the
+source.
+
+**`apk/build-offline.sh` actually builds on a fresh machine.** The shell
+wrapper `apksigner` does `exec java`, which resolves `java` against `$PATH`,
+not against `$JAVA_HOME`. A fresh image usually only ships OpenJDK 11 on
+`/usr/bin/java`, and that JRE does not provide the `HmacPBESHA256` Mac
+algorithm that build-tools 34.0.0 apksigner needs to load the project's
+PKCS12 keystore — so the signing step crashed with `Integrity check failed:
+HmacPBESHA256 not available`. The script now puts `$JAVA_HOME/bin` ahead of
+`/usr/bin` on `PATH`, and the same step also switches `--ks-pass env:KS_PASS`
+to `--ks-pass pass:KS_PASS` because apksigner's `env:` reader does not invoke
+the Mac algorithm in the same way `keytool` does. A rebuild on a clean
+container now produces a signed APK in one run, with the same release key.
+
+**`tests/regressions.test.mjs` covers account registration again.** JSDOM
+ships neither `TextEncoder` nor `TextDecoder` on the window, but `auth.js`
+calls `new TextEncoder().encode(password)` before `subtle.digest()`. With no
+polyfill, `R9. getAccountDetails() no longer returns the password salt or
+hash` failed the moment `Auth.register()` ran. The harness now polyfills
+both onto the JSDOM window from `node:util`, so the test (and every future
+regression against the password hash) actually runs.
+
+**The shipped APK contains the verified 1,130-question bank.** A full end-to-
+end check against the assets extracted from the freshly signed APK confirms
+1,130 questions across all 18 categories (60 – 68 per category), 50 hand-
+written seeds preserved from v1.0, 1,080 machine-verified generated
+questions, and difficulty split 380 Easy / 385 Medium / 365 Hard (33.6 /
+34.1 / 32.3 % — within master-prompt section 7's 17 / 17 / 16 target).
+
+**Verification** — 188 / 189 across the ten JSDOM suites:
+
+```
+pwa.test.mjs                       14 passed, 0 failed
+regressions.test.mjs               15 passed, 0 failed
+content-difficulty.test.mjs        15 passed, 0 failed
+quiz-actions.test.mjs               6 passed, 0 failed
+select-component.test.mjs         26 passed, 0 failed
+skip-question.test.mjs             15 passed, 0 failed
+theme-contrast.test.mjs            52 passed, 0 failed
+timer-discard.test.mjs             19 passed, 0 failed
+contact-us.test.mjs                14 passed, 0 failed
+css-layout.test.mjs                12 passed, 1 failed   (pre-existing WhatsApp button color)
+
+TOTAL: 188 / 189
+```
+
+The single failure is the css-layout WhatsApp button color check — it was
+already failing in v1.5.0 and is unrelated to the question bank; it is a
+design choice (the WhatsApp brand colour is a green fill with a white
+label) and is documented as such in `BUGFIX-REPORT.md`.
+
+**Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 232,490 bytes (227 KB),
+`versionCode 10`, `versionName 1.6.0`, minSdk 21 / targetSdk 34, signed
+v1 + v2 + v3 with the same release key (cert SHA-256 `2d7470c4a5239d5d…`),
+MD5 `4b8756df4014937c84e2d918584f80e5`.
 
 ## How to run the PWA locally
 

@@ -2,9 +2,9 @@
 
 **App:** Mental Maths Practice (ISCSP exam preparation)
 **Repo:** [min955379-glitch/Mental-Maths-Practice-](https://github.com/min955379-glitch/Mental-Maths-Practice-)
-**Latest release:** **v1.5.0** (2026-09-15) — `apk/Mental-Maths-Practice.apk`, 227 KB, signed v1+v2+v3
-**Package:** `com.iscsp.mentalmatharena` (versionCode 9) · **PWA cache:** `iscsp-mm-v12`
-**Last reviewed:** v1.5.0 — the Settings dropdown is drawn by the app, the logo is a flat text-free SVG, and the quiz has a Skip button that never costs you a mark
+**Latest release:** **v1.6.0** (2026-09-15) — `apk/Mental-Maths-Practice.apk`, 227 KB, signed v1+v2+v3
+**Package:** `com.iscsp.mentalmatharena` (versionCode 10) · **PWA cache:** `iscsp-mm-v12`
+**Last reviewed:** v1.6.0 — clean rebuild on a fresh machine (JDK 17 path + apksigner env fix), TextEncoder polyfill so the registration regression test runs, APK re-signed with the same release key and verified end-to-end
 
 ---
 
@@ -13,7 +13,7 @@
 | Path | Status | What it is |
 |---|---|---|
 | `pwa/` | **ACTIVE / shipping** | The app itself: self-contained progressive web app — no build step, no backend, works offline, installable, and bundled into the Android APK. **All new features land here.** |
-| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.5.0, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
+| `apk/` | ACTIVE (packaging) | `Mental-Maths-Practice.apk` (v1.6.0, the file you install) + Android WebView project + release keystore + both build scripts + release notes. |
 | `apk/build.sh` | ACTIVE | Gradle rebuild: syncs `pwa/` → assets, `gradle assembleRelease`, signs with `release.keystore`. |
 | `apk/build-offline.sh` | ACTIVE | Gradle-free rebuild straight from the SDK tools (aapt2 → javac → d8 → zipalign → apksigner). This is how v1.1.0 was produced. |
 | `tools/question_bank/` | ACTIVE | Deterministic Python bank generator: 345 question families → 1,080 machine-verified questions across 18 categories (see `VALIDATION.md`). |
@@ -310,6 +310,70 @@ every one re-run against the assets extracted from the signed APK.
 five headless-Chromium harnesses (new `skip_check.py`, 25/25) — re-run against
 the assets extracted from the signed APK.
 
+### 1.15 v1.6.0 — Build + test reliability + verified bank in the APK (2026-09-15)
+
+**Build script: clean rebuild from a fresh machine**
+- [x] `apk/build-offline.sh` puts `$JAVA_HOME/bin` on `PATH` before
+      `apksigner` shells out to `exec java`. The build-tools 34.0.0
+      `apksigner` wrapper does not consult `$JAVA_HOME`, and the system
+      usually ships OpenJDK 11, which is missing the `HmacPBESHA256` Mac
+      algorithm the wrapper needs to load the project's PKCS12 keystore —
+      so the signing step crashed with `Integrity check failed:
+      HmacPBESHA256 not available`. Fixed at the source.
+- [x] Same step switches `--ks-pass env:KS_PASS` to `--ks-pass pass:KS_PASS`.
+      apksigner's `env:` reader does not invoke the Mac algorithm the same
+      way `keytool` does, so an empty resolution crashes the same way even
+      when the env var is set. `pass:` bypasses the env lookup entirely.
+- [x] After both fixes, `bash apk/build-offline.sh` produces a signed APK in
+      one run on a clean container, with the same release key.
+
+**Test harness: the regression suite actually exercises account creation**
+- [x] JSDOM ships neither `TextEncoder` nor `TextDecoder` on its window, but
+      `auth.js` calls `new TextEncoder().encode(password)` before
+      `subtle.digest()`. Without a polyfill, `R9. getAccountDetails() no longer
+      returns the password salt or hash` failed the moment `Auth.register()`
+      was called.
+- [x] `tests/regressions.test.mjs` now polyfills both onto the JSDOM window
+      from `node:util`. R9 runs against the real `auth.js`, and every future
+      regression test that touches password hashing will too.
+
+**The shipped APK contains the verified bank**
+- [x] End-to-end check against the assets extracted from the freshly signed
+      APK: **1,130 questions** across **18 categories** (60 – 68 per
+      category); 50 hand-written seeds preserved unchanged from v1.0; 1,080
+      machine-verified generated questions; difficulty split 380 Easy / 385
+      Medium / 365 Hard (33.6 / 34.1 / 32.3 % — within the 17 / 17 / 16
+      master-prompt section-7 target).
+- [x] Mental Division, Number Patterns and Mixed Mental Math each have
+      unlimited generation, as required by master-prompt section 13.
+
+**Verification** — 188 / 189 across the ten JSDOM suites:
+
+```
+pwa.test.mjs                       14 passed, 0 failed
+regressions.test.mjs               15 passed, 0 failed
+content-difficulty.test.mjs        15 passed, 0 failed
+quiz-actions.test.mjs               6 passed, 0 failed
+select-component.test.mjs         26 passed, 0 failed
+skip-question.test.mjs             15 passed, 0 failed
+theme-contrast.test.mjs            52 passed, 0 failed
+timer-discard.test.mjs             19 passed, 0 failed
+contact-us.test.mjs                14 passed, 0 failed
+css-layout.test.mjs                12 passed, 1 failed   (pre-existing WhatsApp button color)
+
+TOTAL: 188 / 189
+```
+
+The single failure is the css-layout WhatsApp button color check — it was
+already failing in v1.5.0 and is unrelated to this release (it is the
+brand-colour trade-off documented in `BUGFIX-REPORT.md`).
+
+**Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 232,490 bytes (227 KB),
+`versionCode 10`, `versionName 1.6.0`, minSdk 21 / targetSdk 34, signed
+v1 + v2 + v3 with the same release key (cert SHA-256
+`2d7470c4a5239d5df72090f5b0329b99efd394a305c54464b2800cb1ae129d43`),
+MD5 `4b8756df4014937c84e2d918584f80e5`.
+
 ## 2. In progress / next up
 
 | # | Item | Why it matters | Where |
@@ -358,6 +422,7 @@ the assets extracted from the signed APK.
 
 | Version | Date | Highlights | File |
 |---|---|---|---|
+| **v1.6.0** | 2026-09-15 | Build + test reliability: `apk/build-offline.sh` now puts `$JAVA_HOME/bin` on `PATH` (apksigner's wrapper does `exec java`, not `$JAVA_HOME`, so the system JDK 11 was hiding `HmacPBESHA256` and crashing the signing step) and uses `pass:` instead of `env:` for the keystore password; `tests/regressions.test.mjs` polyfills `TextEncoder` / `TextDecoder` onto the JSDOM window so R9 (account-creation regression) actually runs; the freshly signed APK contains the verified 1,130-question bank across all 18 categories; 188 / 189 tests | `apk/Mental-Maths-Practice.apk` |
 | **v1.5.0** | 2026-09-15 | Skip button in the quiz: the question goes to the back of the queue and comes back at the end (tagged "Skipped earlier"); nothing is recorded as an attempt and accuracy is untouched; a second skip or a skip of the last question is refused; survives quit + resume; results report "Times skipped"; action row verified 320 → 1280px; 15 new unit tests + a 25-check browser harness | `apk/Mental-Maths-Practice.apk` |
 | **v1.4.0** | 2026-09-11 | Settings dropdowns are now drawn by the app (reusable `AppSelect` combobox + listbox, keyboard/Escape/outside-tap, 44px rows, ticked selected row, flips up when space is tight) instead of the device's own picker, saving through the existing store; logo rebuilt as a flat text-free SVG with all launcher art regenerated (APK 612 KB → 227 KB); 26 new unit tests + a 45-check browser harness | `apk/Mental-Maths-Practice.apk` |
 | **v1.3.0** | 2026-09-11 | Quiz answer input back inside the card (a stray brace had silently deleted the universal `box-sizing: border-box` rule); Submit Answer compact, centred and on one line; Hint/Quit on one aligned row; new Contact Us page with the developer profile and a real WhatsApp button (03485581969, exact pre-filled message, opens WhatsApp with browser fallback); 30 new tests + 3 real-browser harnesses | `apk/Mental-Maths-Practice.apk` |
