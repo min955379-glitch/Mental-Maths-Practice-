@@ -309,6 +309,7 @@
         <div class="quiz-cat-row">
           <span class="quiz-cat" id="qCategory">Category</span>
           <span class="q-diff" id="qDifficulty" hidden></span>
+          <span class="q-skip-tag" id="qSkipTag" hidden>Skipped earlier</span>
         </div>
         <div class="quiz-q" id="qText">Question</div>
         <form class="quiz-form" id="quizForm" autocomplete="off">
@@ -316,11 +317,15 @@
           <input type="text" id="qInput" name="answer" placeholder="Type your answer..." inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false" />
           <!-- Action hierarchy: Submit Answer is the primary action on the
                upper row (right-aligned); Hint and Quit sit on the row below. -->
-          <div class="quiz-actions">
+          <div class="quiz-actions" id="quizActions">
             <button type="submit" class="btn btn-primary btn-lg" id="qSubmit">Submit Answer</button>
             <button type="button" class="btn btn-ghost" id="qHint" hidden>
               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c1 1 2 2 2 4h4c0-2 1-3 2-4a7 7 0 0 0-4-12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
               Hint
+            </button>
+            <button type="button" class="btn btn-ghost" id="qSkip" aria-label="Skip this question and come back to it at the end">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 5l9 7-9 7V5zM19 5v14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Skip
             </button>
             <button type="button" class="btn btn-ghost" id="qQuit" aria-label="Quit quiz and save progress">
               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -360,6 +365,7 @@
           <div><span class="r-label">Fastest answer</span><span class="r-value" id="resFast">&mdash;</span></div>
           <div><span class="r-label">Correct</span><span class="r-value" id="resCorrect">0</span></div>
           <div><span class="r-label">Incorrect</span><span class="r-value" id="resWrong">0</span></div>
+          <div id="resSkippedWrap" hidden><span class="r-label">Times skipped</span><span class="r-value" id="resSkipped">0</span></div>
         </div>
       </div>
       <h2 class="section-title">Category breakdown</h2>

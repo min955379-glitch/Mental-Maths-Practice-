@@ -128,19 +128,24 @@ test('Submit Answer keeps a comfortable touch target without being oversized', (
   assert(minH <= 52, `min-height ${minH}px is taller than it needs to be`);
 });
 
-test('Hint and Quit share the second row, pinned to the card edges, same size', () => {
+test('Hint, Skip and Quit share the second row, pinned to the card edges, same size', () => {
   const hint = style('#qHint');
+  const skip = style('#qSkip');
   const quit = style('#qQuit');
-  assert(hint.getPropertyValue('grid-row').trim() === '2', 'Hint belongs on the second row');
-  assert(quit.getPropertyValue('grid-row').trim() === '2', 'Quit belongs on the second row');
+  for (const [name, rule] of [['Hint', hint], ['Skip', skip], ['Quit', quit]]) {
+    assert(rule.getPropertyValue('grid-row').trim() === '2', `${name} belongs on the second row`);
+  }
   assert(hint.getPropertyValue('grid-column').trim() === '1', 'Hint is the left-hand control');
-  assert(quit.getPropertyValue('grid-column').trim() === '2', 'Quit is the right-hand control');
+  assert(skip.getPropertyValue('grid-column').trim() === '2', 'Skip sits in the middle');
+  assert(quit.getPropertyValue('grid-column').trim() === '3', 'Quit is the right-hand control');
   assert(hint.getPropertyValue('justify-self').trim() === 'start', 'Hint must sit toward the left');
+  assert(skip.getPropertyValue('justify-self').trim() === 'center', 'Skip must be centred between them');
   assert(quit.getPropertyValue('justify-self').trim() === 'end', 'Quit must sit toward the right');
-  // Identical sizing declarations is what makes the two buttons consistent.
+  // Identical sizing declarations is what keeps the three buttons consistent.
   for (const prop of ['width', 'max-width']) {
-    assert(hint.getPropertyValue(prop) === quit.getPropertyValue(prop),
-      `Hint and Quit disagree on ${prop} (${hint.getPropertyValue(prop)} vs ${quit.getPropertyValue(prop)})`);
+    assert(hint.getPropertyValue(prop) === skip.getPropertyValue(prop)
+        && skip.getPropertyValue(prop) === quit.getPropertyValue(prop),
+      `Hint, Skip and Quit disagree on ${prop} (${hint.getPropertyValue(prop)} / ${skip.getPropertyValue(prop)} / ${quit.getPropertyValue(prop)})`);
   }
 });
 

@@ -1,5 +1,38 @@
 # Release notes
 
+## v1.5.0 — Skip question
+
+**File:** `apk/Mental-Maths-Practice.apk` (227 KB / 232,490 bytes, versionCode 9, versionName 1.5.0)
+**MD5:** `c6e11c06d760fa67c45afecd0772f3a2`
+**SHA-256:** `891beff9ce35df500989fb3039c420b8871ddcb8cad56f1680c5b7b271a0ea69`
+**Signed:** v1 + v2 + v3 with the same release key (signer MD5 `efaba7267a95c337ecfaa8b4cb2241c0`), so this installs as an update over v1.4.0 and keeps your data.
+**Requires:** Android 5.0 (API 21)+
+
+### What changed
+- **New Skip button** in the quiz, next to Hint and Quit. The question goes to
+  the back of the queue and the next one appears straight away.
+- **It comes back.** The skipped question returns at the end of the session,
+  tagged *Skipped earlier*, so nothing is lost.
+- **It costs you nothing.** Skipping is not an answer: no attempt is recorded,
+  and your accuracy, streaks and mistake list are untouched. The results screen
+  shows how many times you used it.
+- **No loopholes.** You cannot skip the same question twice, and you cannot
+  skip the last question left - so a quiz always ends with everything answered
+  (or with you quitting, which still saves your place for Continue Quiz).
+- Skips survive a quit and a resume: the queue order and the skipped questions
+  come back exactly as they were.
+
+### Verified
+189/189 unit tests (ten suites, including a new 15-test skip suite) and five
+headless-Chromium harnesses — a new 25-check skip harness (queue rotation,
+revisit, nothing recorded, second skip refused, last question refused,
+quit + resume, keyboard, 320 → 1280px geometry), plus the dropdown (45/45),
+journey (30/30), geometry (8/8) and contrast harnesses. All re-run against the
+`assets/` extracted from this signed APK.
+
+---
+
+
 ## v1.4.0 — Custom Settings dropdown + new logo
 
 **File:** `apk/Mental-Maths-Practice.apk` (227 KB / 232,490 bytes, versionCode 8, versionName 1.4.0)

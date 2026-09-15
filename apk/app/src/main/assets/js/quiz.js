@@ -26,7 +26,7 @@
     else { pool = buildPool({count:10, difficulty:'Mixed', preferSeed:true}); }
     // Remember what was served so the next session rotates to fresh ones.
     if (StateStore.markServed) StateStore.markServed(pool.map((q) => q.id));
-    const session = { id:StateStore.uid(), userId:StateStore.getUser()?StateStore.getUser().id:'anon', mode, category, difficulty, count:pool.length, timeLimitSec, startedAt:new Date().toISOString(), completedAt:null, correct:0, incorrect:0, totalResponseTimeMs:0, fastestMs:null, questionIds:pool.map(q => q.id), questionCache:pool };
+    const session = { id:StateStore.uid(), userId:StateStore.getUser()?StateStore.getUser().id:'anon', mode, category, difficulty, count:pool.length, timeLimitSec, startedAt:new Date().toISOString(), completedAt:null, correct:0, incorrect:0, skipped:0, totalResponseTimeMs:0, fastestMs:null, questionIds:pool.map(q => q.id), questionCache:pool };
     return session;
   }
   function buildPool({count, difficulty, category, preferSeed, balanced}) {
@@ -200,7 +200,7 @@
     set remainingSec(v) { this.remainingMs = Math.max(0, Number(v) || 0) * 1000; },
     // per-question progress for the current session
     progress: null,
-    onTick: null, onTimeout: null, onFeedback: null, onAdvance: null, onFinish: null,
+    onTick: null, onTimeout: null, onFeedback: null, onAdvance: null, onSkip: null, onFinish: null,
     // ----------------------------------------------------------------
     start(session) {
       this.current = session;
@@ -345,6 +345,47 @@
       return !!(e.isCorrect === true || (e.userAnswer !== '' && e.userAnswer != null));
     },
     isQuestionCorrect(idx) { return !!(this.progress && this.progress.entries[idx] && this.progress.entries[idx].isCorrect); },
+    isQuestionSkipped(idx) { return !!(this.progress && this.progress.entries[idx] && this.progress.entries[idx].skipped); },
+    // Skip the question you are looking at and come back to it at the end of
+    // the session. Nothing is recorded as an attempt and neither `correct` nor
+    // `incorrect` moves, so accuracy and streaks are untouched - the question
+    // simply costs you marks until you answer it.
+    //
+    // Returns false when there is nothing sensible to do:
+    //   * the question has already been skipped once (otherwise a user who
+    //     keeps tapping Skip would cycle forever without ever answering), or
+    //   * it is the last question in the queue, so moving it to the back
+    //     would leave the user staring at the same question.
+    skip() {
+      if (!this.current || !this.progress || !this.progress.entries[this.index]) return false;
+      const entry = this.progress.entries[this.index];
+      const canMove = this.index < this.current.questionCache.length - 1;
+      if (entry.skipped || !canMove) return false;
+      // Bank the time spent on the question before it leaves the screen.
+      this._endQuestion();
+      entry.questionMs = Math.round(this.questionMs);
+      entry.skippedAt = new Date().toISOString();
+      entry.skipped = true;
+      // Keep every parallel array in step: the question, its progress entry
+      // and the id list the dashboard uses to describe an unfinished quiz.
+      const q = this.current.questionCache.splice(this.index, 1)[0];
+      const e = this.progress.entries.splice(this.index, 1)[0];
+      this.current.questionCache.push(q);
+      this.progress.entries.push(e);
+      if (Array.isArray(this.current.questionIds) && this.current.questionIds.length === this.current.questionCache.length) {
+        const id = this.current.questionIds.splice(this.index, 1)[0];
+        this.current.questionIds.push(id);
+      }
+      this.current.skipped = (this.current.skipped || 0) + 1;
+      // The next question has slid into this index; start timing it now.
+      this.questionMs = 0;
+      this.questionStart = null;
+      this._resumeQuestion();
+      this._saveSnapshot();
+      if (this.onSkip) this.onSkip();
+      else if (this.onAdvance) this.onAdvance();
+      return true;
+    },
     hintsUsedForCurrent() { if(!this.progress || !this.progress.entries[this.index]) return 0; return this.progress.entries[this.index].hintsUsed || 0; },
     markHintUsed() { if(this.progress && this.progress.entries[this.index]) { this.progress.entries[this.index].hintsUsed = (this.progress.entries[this.index].hintsUsed || 0) + 1; this._saveSnapshot(); } },
     submit(answer) {
@@ -466,6 +507,7 @@
       this.onTimeout = null;
       this.onFeedback = null;
       this.onAdvance = null;
+      this.onSkip = null;
       this.onFinish = null;
     }
   };

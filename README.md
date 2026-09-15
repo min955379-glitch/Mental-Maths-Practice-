@@ -3,9 +3,9 @@
 A complete, polished, production-quality mental-math training platform for
 ISCSP exam preparation.
 
-> **Latest release — v1.4.0 (2026-09-11).** Signed Android APK:
+> **Latest release — v1.5.0 (2026-09-15).** Signed Android APK:
 > [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 583 KB,
-> versionCode 8, signed with the release key (v1 + v2 + v3 verified). It
+> versionCode 9, signed with the release key (v1 + v2 + v3 verified). It
 > installs as an in-place update over earlier builds and keeps your progress.
 > **v1.2.0 is the content + difficulty release:** **1,130 original questions**
 > across all 18 categories (50+ per category, split Easy / Medium / Hard by
@@ -24,7 +24,7 @@ ISCSP exam preparation.
 ```
 .
 ├── apk/
-│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.4.0 (227 KB)
+│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.5.0 (227 KB)
 │   ├── app/                          # Android project (Java + WebView wrapper)
 │   │   └── src/main/assets/          # PWA bundled inside the APK (file:///android_asset/)
 │   ├── gradle/wrapper/               # Gradle wrapper
@@ -73,11 +73,11 @@ With a computer and USB debugging enabled: `adb install -r Mental-Maths-Practice
 | What | Value |
 |---|---|
 | Package | `com.iscsp.mentalmatharena` |
-| Version | versionCode 8 · versionName 1.4.0 |
+| Version | versionCode 9 · versionName 1.5.0 |
 | Size | 227 KB (232,490 bytes) |
 | Min / target SDK | 21 (Android 5.0) / 34 (Android 14) |
 | Signature | v1 + v2 + v3, release key SHA-256 `2d7470c4a5239d5d…` |
-| MD5 | `8cb49564362a77b577517efe86c174d5` |
+| MD5 | `c6e11c06d760fa67c45afecd0772f3a2` |
 
 ## Live progress log
 
@@ -463,7 +463,7 @@ spread.
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 592,803 bytes (579 KB),
 `versionCode 4`, `versionName 1.2.0`, minSdk 21 / targetSdk 34, signed
 v1 + v2 + v3 with the same release key (cert SHA-256 `2d7470c4…`),
-MD5 `8cb49564362a77b577517efe86c174d5`.
+MD5 `c6e11c06d760fa67c45afecd0772f3a2`.
 
 ### Step 21 — v1.2.1: Discard Quiz and the quiz timer actually work
 
@@ -674,7 +674,53 @@ the finished APK.
 
 **Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 232,490 bytes (227 KB),
 `versionCode 8`, `versionName 1.4.0`, minSdk 21 / targetSdk 34, signed
-v1 + v2 + v3 with the same release key, MD5 `8cb49564362a77b577517efe86c174d5`.
+v1 + v2 + v3 with the same release key, MD5 `c6e11c06d760fa67c45afecd0772f3a2`.
+
+### Step 25 — v1.5.0: a Skip button that costs you nothing
+
+**You could not get past a question you were stuck on.** The quiz only ever
+moved forward: answer it, or quit the whole session. Now there is a **Skip**
+button on the row with Hint and Quit.
+
+**What Skip does.** The question moves to the back of the queue and the next
+one takes its place; the position counter does not jump around. The skipped
+question **comes back at the end of the session**, tagged *Skipped earlier*, so
+you know why a question you have already seen is back on screen.
+
+**It is not an answer.** Nothing is written to the attempt history, and neither
+`correct` nor `incorrect` moves - so accuracy, streaks and the mistake-review
+list are untouched. The question simply costs you a mark until you answer it,
+and that is exactly what the results screen reports.
+
+**It cannot be abused.** A question cannot be skipped twice ("You already
+skipped this one — answer it, or quit and come back later"), and the last
+question left in the queue cannot be skipped at all, because moving it to the
+back would only show you the same question again. A quiz therefore always ends
+with every question answered - or with you quitting, which still saves your
+place.
+
+Under the bonnet `Quiz.skip()` rotates the question, its progress entry and the
+id list in lockstep, banks the time you spent reading it, and writes the
+snapshot, so a skip survives a quit and a resume: the queue order and the
+skipped flags come back exactly as they were.
+
+**The action row stayed tidy.** Submit Answer is still centred on its own row,
+with the secondary actions below it - now three: Hint, Skip, Quit. Measured in
+Chromium at every width from 320px to 1280px: three equal buttons, 44px tall,
+no clipped labels, nothing outside the card. In Full Test, which has no Hint
+button, Skip and Quit split the row between them.
+
+**Verification** — 189/189 across ten suites (**new `skip-question` suite, 15**)
+plus five headless-Chromium harnesses (**new `skip_check.py`, 25/25**): the
+skip moves the question, brings it back, records nothing, refuses a second
+skip, refuses the last question, survives quit + resume, works from the
+keyboard and reports itself on the results screen - and a quiz can still be
+answered and finished normally. All re-run against the `assets/` extracted
+from the finished APK.
+
+**Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 232,490 bytes (227 KB),
+`versionCode 9`, `versionName 1.5.0`, minSdk 21 / targetSdk 34, signed
+v1 + v2 + v3 with the same release key, MD5 `c6e11c06d760fa67c45afecd0772f3a2`.
 
 ## How to run the PWA locally
 

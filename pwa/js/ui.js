@@ -530,7 +530,41 @@
         hintBtn.hidden = true;
         hintBtn.classList.remove('activated');
         hintBtn.disabled = false;
+        // Only Skip + Quit left on the row: give them the two columns.
+        const actions = document.getElementById('quizActions');
+        if (actions) actions.classList.add('no-hint');
       }
+    }
+
+    // Skipped-earlier tag ----------------------------------------------------
+    // A skipped question comes back at the end of the session. Say so, so the
+    // user knows why a question they already saw is on screen again.
+    const skipTag = document.getElementById('qSkipTag');
+    if (skipTag) {
+      if (window.QuizEngine.Quiz.isQuestionSkipped(index)) skipTag.hidden = false;
+      else skipTag.hidden = true;
+    }
+
+    // Skip button --------------------------------------------------------------
+    // Moves the current question to the back of the queue. It is not an
+    // answer: nothing is recorded as an attempt and accuracy is untouched.
+    const skipBtn = document.getElementById('qSkip');
+    if (skipBtn) {
+      skipBtn.onclick = (e) => {
+        e.preventDefault();
+        const eng = window.QuizEngine.Quiz;
+        const entry = eng.progress && eng.progress.entries[eng.index];
+        if (entry && entry.skipped) {
+          showToast('You already skipped this one — answer it, or quit and come back later.', 'error');
+          return;
+        }
+        if (eng.index >= eng.current.questionCache.length - 1) {
+          showToast('This is the last question left — answer it, or quit.', 'error');
+          return;
+        }
+        if (!eng.skip()) return;
+        showToast('Skipped — it will come back at the end.', 'success');
+      };
     }
 
     // Quit button --------------------------------------------------------------
@@ -559,6 +593,9 @@
     window.QuizEngine.Quiz.onTimeout = () => { showToast('Time is up. Submitting final answers.', 'error'); window.QuizEngine.Quiz.finish(); };
     window.QuizEngine.Quiz.onFeedback = (attempt, q) => { showFeedback(attempt, q, session); };
     window.QuizEngine.Quiz.onAdvance = () => { const i = window.QuizEngine.Quiz.index; const s = window.QuizEngine.Quiz.current; renderQuizScreen(main, s, i); };
+    // Skip keeps the index and rotates the queue, so the next question is
+    // already at this index when the callback fires.
+    window.QuizEngine.Quiz.onSkip = () => { const eng = window.QuizEngine.Quiz; renderQuizScreen(main, eng.current, eng.index); };
     window.QuizEngine.Quiz.onFinish = (finishedSession) => { renderResult(main, finishedSession); };
     document.getElementById('quizForm').addEventListener('submit', (e) => { e.preventDefault(); const val = input.value; if(val.trim() === '') { showToast('Type an answer first.', 'error'); return; } window.QuizEngine.Quiz.submit(val); });
   }
@@ -655,6 +692,14 @@
     document.getElementById('resFast').textContent = session.fastestMs == null ? '-' : Stats.formatTime(session.fastestMs);
     document.getElementById('resCorrect').textContent = session.correct;
     document.getElementById('resWrong').textContent = session.incorrect;
+    const skipped = Number(session.skipped) || 0;
+    const skippedWrap = document.getElementById('resSkippedWrap');
+    if (skippedWrap) {
+      // Only shown when it matters; the figure is still honest either way
+      // (skipped questions are neither correct nor incorrect).
+      skippedWrap.hidden = skipped === 0;
+      document.getElementById('resSkipped').textContent = String(skipped);
+    }
     const map = {}; for (const q of session.questionCache) { const attempts = StateStore.getAttempts().filter(a => a.sessionId === session.id && a.questionId === q.id); const att = attempts[attempts.length-1]; if(!att) continue; if(!map[att.category]) map[att.category] = {correct:0,total:0}; map[att.category].total++; if(att.isCorrect) map[att.category].correct++; }
     const list = document.getElementById('resCategoryBars');
     Object.entries(map).forEach(([cat,v]) => { const acc = Math.round((v.correct/v.total)*100); const row = el('div', {class:'bar-row'}); row.appendChild(el('span', {class:'bar-name'}, cat)); const track = el('div', {class:'bar-track'}); const fill = el('div', {class:'bar-fill'}); fill.style.width = acc + '%'; track.appendChild(fill); row.appendChild(track); row.appendChild(el('span', {class:'bar-pct'}, acc + '%')); list.appendChild(row); });

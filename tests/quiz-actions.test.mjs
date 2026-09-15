@@ -69,19 +69,23 @@ await test('A1. Action hierarchy: Submit Answer first and primary, Hint and Quit
   assert(actions, 'no .quiz-actions container on the quiz screen');
 
   const ids = [...actions.children].map((b) => b.id);
-  eq(ids.join(','), 'qSubmit,qHint,qQuit', 'DOM order should be Submit, Hint, Quit (matches the visual grid)');
+  eq(ids.join(','), 'qSubmit,qHint,qSkip,qQuit', 'DOM order should be Submit, Hint, Skip, Quit (matches the visual grid)');
 
   const submit = byId(dom, 'qSubmit');
   const hint = byId(dom, 'qHint');
+  const skip = byId(dom, 'qSkip');
   const quit = byId(dom, 'qQuit');
 
   eq(submit.getAttribute('type'), 'submit', 'Submit must remain the form submit button');
   assert(submit.classList.contains('btn-primary'), 'Submit must use the primary style');
   assert(submit.classList.contains('btn-lg'), 'Submit should be the visually dominant action');
   eq(hint.getAttribute('type'), 'button', 'Hint must not submit the form');
+  eq(skip.getAttribute('type'), 'button', 'Skip must not submit the form');
   eq(quit.getAttribute('type'), 'button', 'Quit must not submit the form');
   assert(hint.classList.contains('btn-ghost'), 'Hint should be a secondary action');
+  assert(skip.classList.contains('btn-ghost'), 'Skip should be a secondary action');
   assert(quit.classList.contains('btn-ghost'), 'Quit should be a secondary action');
+  assert(!skip.classList.contains('btn-primary'), 'Skip must not compete with Submit Answer');
   assert(!quit.classList.contains('btn-primary'), 'Quit must not look like the primary action');
 
   // Grid placement: row 1 centred (Submit, under the input), row 2 left
@@ -95,12 +99,15 @@ await test('A1. Action hierarchy: Submit Answer first and primary, Hint and Quit
   assert(/#qQuit\s*\{[^}]*grid-row:\s*2/s.test(CSS), 'Quit should sit on the second grid row');
   assert(/#qHint\s*\{[^}]*justify-self:\s*start/s.test(CSS), 'Hint should be left aligned');
   assert(/#qQuit\s*\{[^}]*justify-self:\s*end/s.test(CSS), 'Quit should be right aligned');
+  assert(/#qSkip\s*\{[^}]*grid-row:\s*2/s.test(CSS), 'Skip should share the second row');
+  assert(/#qSkip\s*\{[^}]*justify-self:\s*center/s.test(CSS), 'Skip should sit between Hint and Quit');
 
   // No emoji, real SVG icons on the secondary actions.
-  for (const b of [submit, hint, quit]) {
+  for (const b of [submit, hint, skip, quit]) {
     assert(!/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(b.textContent), `button uses emoji: ${b.textContent.trim()}`);
   }
   assert(hint.querySelector('svg'), 'Hint needs its lightbulb icon');
+  assert(skip.querySelector('svg'), 'Skip needs its skip icon');
   assert(quit.querySelector('svg'), 'Quit needs its exit icon');
   dom.window.close();
 });
