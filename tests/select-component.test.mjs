@@ -71,7 +71,7 @@ await test('both Settings selects are upgraded to the custom control', async () 
   assert(doc.querySelectorAll('.select').length === 2, 'expected 2 custom dropdowns');
   assert(doc.querySelectorAll('.select-trigger').length === 2, 'expected 2 triggers');
   assert(doc.querySelectorAll('.select-menu[role="listbox"]').length === 2, 'expected 2 listboxes');
-  assert(doc.querySelectorAll('[role="option"]').length === 3 + 5, 'expected 3 theme + 5 difficulty options');
+  assert(doc.querySelectorAll('[role="option"]').length === 3 + 4, 'expected 3 theme + 4 difficulty options (Easy / Moderate / Hard / Mixed)');
 });
 
 await test('the native select stays in the form and keeps its value', async () => {
@@ -141,7 +141,7 @@ await test('options mirror the native select exactly', async () => {
   const { window: win } = await settings();
   const doc = win.document;
   const pairs = [['setTheme', ['light', 'dark', 'auto'], ['Light', 'Dark', 'Auto (system)']],
-                 ['setDifficulty', ['Easy', 'Medium', 'Hard', 'Expert', 'Mixed'], ['Easy', 'Medium', 'Hard', 'Expert', 'Mixed']]];
+                 ['setDifficulty', ['Easy', 'Moderate', 'Hard', 'Mixed'], ['Easy', 'Moderate', 'Hard', 'Mixed']]];
   for (const [id, values, labels] of pairs) {
     const sel = doc.getElementById(id);
     const wrap = sel.closest('.select');
@@ -300,7 +300,7 @@ await test('every theme option is selectable and applies at once', async () => {
 });
 
 await test('every difficulty option is selectable and saved', async () => {
-  for (const value of ['Easy', 'Medium', 'Hard', 'Expert', 'Mixed']) {
+  for (const value of ['Easy', 'Moderate', 'Hard', 'Hard', 'Mixed']) {
     const { window: win } = await settings();
     const doc = win.document;
     const wrap = doc.getElementById('setDifficulty').closest('.select');
@@ -342,12 +342,12 @@ await test('the rest of the Settings form still saves the way it always did', as
   doc.getElementById('setGoal').value = '30';
   doc.getElementById('setMotion').checked = true;
   doc.getElementById('setTheme').value = 'dark';           // the native select still drives the save
-  doc.getElementById('setDifficulty').value = 'Expert';
+  doc.getElementById('setDifficulty').value = 'Hard';
   doc.getElementById('settingsForm').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
   await sleep(60);
   const s = stored(win);
   assert(s.sound === true && s.defaultCount === 15 && s.dailyGoal === 30 && s.reducedMotion === true, 'form save broke');
-  assert(s.theme === 'dark' && s.difficulty === 'Expert', 'the selects stopped feeding the save handler');
+  assert(s.theme === 'dark' && s.difficulty === 'Hard', 'the selects stopped feeding the save handler');
   assert(doc.documentElement.dataset.reducedMotion === 'true', 'reduced motion did not apply');
 });
 

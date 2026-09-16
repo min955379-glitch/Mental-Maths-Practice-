@@ -121,24 +121,13 @@ function eq(actual, expected, msg) {
 console.log('\nMental Maths Practice — end-to-end suite\n');
 
 const RELEVANCE = {
-  Percentages: ['percent', '%'],
-  'Speed Distance Time': ['speed', 'distance', 'time', 'km', 'hour', 'train'],
-  Fractions: ['fraction', 'denominator', 'numerator', 'butterfly', 'common'],
-  'Ratios Proportions': ['ratio', 'unit', 'parts', 'proportion', 'cross-multiply'],
-  'Profit Loss': ['cost', 'profit', 'loss', 'discount', 'selling'],
-  Averages: ['average', 'total', 'count', 'middle', 'mean'],
-  'Work Time': ['work', 'rate', 'days', 'men', 'workers', 'hour'],
-  'Pipes Tanks': ['pipe', 'tank', 'rate', 'fill'],
-  'Unit Conversion': ['km/h', 'm/s', 'unit', 'convert', '3.6', '5/18', 'steps'],
-  'Basic Arithmetic': ['bodmas', 'pemdas', 'multiplication', 'brackets'],
-  Decimals: ['decimal', 'places', 'point'],
-  'Mental Multiplication': ['11', 'tens', 'factor', 'multiply', 'halving', 'units'],
-  'Mental Division': ['divid', 'cancel', 'factor', 'halv', 'quotient'],
-  'Age Problems': ['age', 'youngest', 'variable', 'parts', 'multiple'],
-  'Time Calculation': ['minute', 'hour', 'time', 'clock', '12:00', 'am/pm'],
-  'Relative Speed': ['speed', 'direction', 'stream', 'boat', 'gap'],
-  'Number Patterns': ['difference', 'pattern', 'term', 'cases', 'pair', 'rule'],
-  'Mixed Mental Math': ['concept', 'estimate', 'pattern', 'idea', 'rate', 'ratio', 'percentage', 'average'],
+  'Speed':           ['speed', 'distance', 'time', 'km/h', 'hour', 'vehicle', 'minutes'],
+  'Percentage':      ['percent', '%', '10%', 'fraction'],
+  'Dozen':           ['dozen', '12', 'cost', 'rupees', 'per dozen'],
+  'Area':            ['area', 'square', 'rectangle', 'triangle', 'semicircle', 'side', 'base', 'height', 'radius'],
+  'DMAS Rule':       ['dmas', 'evaluate', '×', '÷', '−', '+', '×'],
+  'Zakat (2.5%)':    ['zakat', '2.5', 'rupees', 'amount', '40'],
+  'Profit and Loss': ['profit', 'loss', 'cost price', 'selling price', 'rupees', 'percentage'],
 };
 
 await test('1. Hint library: every seed question gets a relevant hint that never reveals the answer', () => {
@@ -444,11 +433,11 @@ await test('14. Regression: dashboard, category practice and results still work'
   assert(byId(dom, 'kpiSolved'), 'dashboard KPIs missing');
   assert(byId(dom, 'categoryBars'), 'category performance missing');
 
-  go(dom, '#/category?cat=Fractions');
+  go(dom, '#/category?cat=Speed');
   assert(dom.window.QuizEngine.Quiz.isActive(), 'category practice did not start');
-  eq(dom.window.QuizEngine.Quiz.current.category, 'Fractions', 'category filter not applied');
+  eq(dom.window.QuizEngine.Quiz.current.category, 'Speed', 'category filter not applied');
   const q = dom.window.QuizEngine.Quiz.currentQuestion();
-  eq(q.category, 'Fractions', 'question outside the chosen category');
+  eq(q.category, 'Speed', 'question outside the chosen category');
 
   // wrong answers still recorded and reviewed
   submitAnswer(dom, 'definitely-wrong');

@@ -39,7 +39,7 @@
   }
   // ---------------------------------------------------------------- difficulty
   function difficultyStats(category) {
-    const order = ['Easy', 'Medium', 'Hard'];
+    const order = ['Easy', 'Moderate', 'Hard'];
     const acc = {};
     order.forEach(d => { acc[d] = { difficulty:d, attempts:0, correct:0, totalMs:0 }; });
     for (const x of attempts()) {
@@ -90,15 +90,15 @@
       return { difficulty: 'Easy', reason: 'Easy is still your weakest result (' + easy.accuracy + '% over ' + easy.attempts + ' questions) - stay here until it feels routine.' };
     }
     if (medium.attempts < need) {
-      return { difficulty: 'Medium', reason: 'Easy is comfortable at ' + easy.accuracy + '%, so step up to Medium.' };
+      return { difficulty: 'Moderate', reason: 'Easy is comfortable at ' + easy.accuracy + '%, so step up to Moderate.' };
     }
     if (medium.accuracy < 55) {
-      return { difficulty: 'Medium', reason: 'Medium is at ' + medium.accuracy + '% - repeat it before moving on.' };
+      return { difficulty: 'Moderate', reason: 'Moderate is at ' + medium.accuracy + '% - repeat it before moving on.' };
     }
     if (hard.attempts < need || hard.accuracy >= 55) {
-      return { difficulty: 'Hard', reason: 'You are holding ' + medium.accuracy + '% on Medium - Hard will stretch your timing.' };
+      return { difficulty: 'Hard', reason: 'You are holding ' + medium.accuracy + '% on Moderate - Hard will stretch your timing.' };
     }
-    return { difficulty: 'Medium', reason: 'Hard is at ' + hard.accuracy + '%, so consolidate on Medium first.' };
+    return { difficulty: 'Moderate', reason: 'Hard is at ' + hard.accuracy + '%, so consolidate on Moderate first.' };
   }
 
   function recentSessions(limit) { return sessions().slice().reverse().slice(0, limit||5); }

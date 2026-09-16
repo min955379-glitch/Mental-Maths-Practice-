@@ -1,26 +1,5 @@
+__pycache__/
+*.pyc
 node_modules/
-dist/
-build/
-.env
-.env.local
-*.log
+.venv/
 .DS_Store
-coverage/
-.vscode/
-.idea/
-backend/prisma/dev.db
-backend/prisma/dev.db-journal
-*.tsbuildinfo
-# Android project build outputs (regenerable)
-apk/app/build/
-apk/build/
-apk/.gradle/
-apk/local.properties
-apk/app/release/
-# v4 APK signature block (regenerable)
-apk/*.apk.idsig
-tests/node_modules
-apk/build-offline/
-tests/node_modules/
-tests/package-lock.json
-tools/question_bank/__pycache__/

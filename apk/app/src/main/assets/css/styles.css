@@ -398,9 +398,9 @@ input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--c-indigo
   padding: 3px 9px; border-radius: 999px; background: var(--c-indigo-100); color: var(--c-on-chip);
 }
 .q-diff[data-difficulty="Hard"] { background: #fdecec; color: #b0302b; }
-.q-diff[data-difficulty="Medium"] { background: #fff4e0; color: #97621a; }
+.q-diff[data-difficulty="Moderate"] { background: #fff4e0; color: #97621a; }
 [data-theme="dark"] .q-diff[data-difficulty="Hard"] { background: #4a1c19; color: #ff9d90; }
-[data-theme="dark"] .q-diff[data-difficulty="Medium"] { background: #46330f; color: #ffd07a; }
+[data-theme="dark"] .q-diff[data-difficulty="Moderate"] { background: #46330f; color: #ffd07a; }
 
 .settings-form .setting-row { display: grid; grid-template-columns: 1fr 220px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--c-border); gap: 12px; }
 .settings-form .setting-row:last-of-type { border-bottom: none; }

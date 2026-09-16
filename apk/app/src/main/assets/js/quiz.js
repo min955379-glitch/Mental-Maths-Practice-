@@ -45,7 +45,7 @@
       useSeed = filteredSeed.slice();
     } else {
       exactTier = false;
-      const tiers = { Expert: ['Expert', 'Hard'], Hard: ['Hard', 'Medium'] }[difficulty] || null;
+      const tiers = { Hard: ['Hard', 'Hard'], Hard: ['Hard', 'Moderate'] }[difficulty] || null;
       let found = null;
       if (tiers) {
         for (const tier of tiers) {
@@ -81,8 +81,8 @@
     // The v1.2 bank holds at least 20 seeded questions for every
     // (category, difficulty) pair, so short sessions are filled entirely from
     // real seeds - the generator only tops up long ones. That keeps the chosen
-    // difficulty honest: generated items can only promise Easy/Medium.
-    // When the requested tier has no seeds of its own (Expert borrows Hard),
+    // difficulty honest: generated items can only promise Easy/Moderate.
+    // When the requested tier has no seeds of its own (Hard borrows Moderate),
     // leave room for the generator so the tier really is represented.
     // Fresh seeds first: questions the user has not been served recently.
     let seedTake = Math.min(fresh.length, count);

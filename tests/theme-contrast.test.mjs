@@ -99,7 +99,7 @@ for (const [label, fg, bg, need, fgOverride, bgOverride] of DARK_PAIRS) {
 
 test('dark: the difficulty pills keep their colour meaning with readable text', () => {
   const cases = [
-    ['Medium', /\[data-theme="dark"\]\s*\.q-diff\[data-difficulty="Medium"\]\s*{[^}]*background:\s*(#[0-9a-f]{6});\s*color:\s*(#[0-9a-f]{6})/],
+    ['Moderate', /\[data-theme="dark"\]\s*\.q-diff\[data-difficulty="Moderate"\]\s*{[^}]*background:\s*(#[0-9a-f]{6});\s*color:\s*(#[0-9a-f]{6})/],
     ['Hard', /\[data-theme="dark"\]\s*\.q-diff\[data-difficulty="Hard"\]\s*{[^}]*background:\s*(#[0-9a-f]{6});\s*color:\s*(#[0-9a-f]{6})/],
   ];
   for (const [name, re] of cases) {

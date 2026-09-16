@@ -289,7 +289,7 @@
       blurb: 'One clear step. The shortcut is visible as soon as you read it.',
       icon: '<path d="M5 19V11M12 19V5M19 19v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
     },
-    Medium: {
+    Moderate: {
       blurb: 'Two steps, or a pattern you have to simplify before it becomes easy.',
       icon: '<path d="M5 19V9M12 19V5M19 19v-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'
     },
@@ -337,7 +337,7 @@
     document.getElementById('setupRecommend').textContent = 'Recommended: ' + rec.difficulty + ' - ' + rec.reason;
 
     const grid = document.getElementById('difficultyGrid');
-    ['Easy', 'Medium', 'Hard'].forEach(diff => {
+    ['Easy', 'Moderate', 'Hard'].forEach(diff => {
       const meta = DIFF_META[diff];
       const stat = stats.find(x => x.difficulty === diff) || { attempts: 0, accuracy: 0 };
       const available = seededCount(cat, diff);

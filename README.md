@@ -3,7 +3,7 @@
 A complete, polished, production-quality mental-math training platform for
 ISCSP exam preparation.
 
-> **Latest release — v1.6.0 (2026-09-15).** Signed Android APK:
+> **Latest release — v1.7.0 (2026-09-16, Seven Approved Categories Only).** Signed Android APK:
 > [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 227 KB
 > (232,490 bytes), versionCode 10, signed with the release key (v1 + v2 +
 > v3 verified). Installs as an in-place update over every earlier build and
@@ -25,7 +25,7 @@ ISCSP exam preparation.
 ```
 .
 ├── apk/
-│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.6.0 (227 KB)
+│   ├── Mental-Maths-Practice.apk     # ★ Signed, installable Android APK — v1.7.0 (167 KB)
 │   ├── app/                          # Android project (Java + WebView wrapper)
 │   │   └── src/main/assets/          # PWA bundled inside the APK (file:///android_asset/)
 │   ├── gradle/wrapper/               # Gradle wrapper

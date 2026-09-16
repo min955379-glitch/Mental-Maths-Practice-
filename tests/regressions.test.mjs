@@ -1,5 +1,5 @@
 /**
- * Regression tests for the bugs found in the deep code review (BUGS.md).
+ * Regression tests for the v1.7.0 PWA (Seven Approved Categories Only).
  *
  * Every test here FAILS against the pre-fix source and PASSES after the fix.
  * They run against the same real application as pwa.test.mjs:
@@ -29,28 +29,20 @@ const HTML_NO_SCRIPTS = rawHtml.replace(/<script src="[^"]+"><\/script>/g, '');
 
 function makeApp(seedStorage) {
   const dom = new JSDOM(HTML_NO_SCRIPTS, {
-    url: 'https://app.local/index.html#/dashboard',   // start on a hash so app.js's boot never queues a navigation
+    url: 'https://app.local/index.html#/dashboard',
     runScripts: 'dangerously',
     pretendToBeVisual: true,
   });
   const win = dom.window;
-  // jsdom ships no TextEncoder / TextDecoder on the window; auth.js calls
-  // `new TextEncoder().encode(password)` before subtle.digest(). Provide
-  // Node's implementation through the JSDOM window so registration works.
   win.TextEncoder = NodeTextEncoder;
   win.TextDecoder = NodeTextDecoder;
   win.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
   win.confirm = () => (win.__confirmAnswer !== undefined ? win.__confirmAnswer : true);
   win.scrollTo = () => {};
 
-  // jsdom keeps document.readyState === 'loading' during this synchronous
-  // setup, so app.js defers its boot() to DOMContentLoaded — which then fires
-  // in the middle of any test that awaits, re-routing and restarting the quiz.
-  // Force the boot to happen now, exactly once, like it does in a browser.
   try {
     Object.defineProperty(win.document, 'readyState', { value: 'complete', configurable: true });
-  } catch (e) { /* ignore: read-only in some jsdom versions */ }
-  // jsdom ships no WebCrypto; the app needs it for password hashing.
+  } catch (e) { /* ignore */ }
   const cryptoShim = {
     getRandomValues: (arr) => webcrypto.getRandomValues(arr),
     subtle: webcrypto.subtle,
@@ -88,7 +80,7 @@ function eq(actual, expected, msg) {
   if (actual !== expected) throw new Error(`${msg || 'values differ'}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
 }
 
-console.log('\nMental Maths Practice — regression suite (BUGS.md fixes)\n');
+console.log('\nMental Maths Practice — regression suite (v1.7.0, seven categories)\n');
 
 await test('R1. Quiz.submit() rejects null / undefined / "" instead of recording a wrong attempt', () => {
   const dom = makeApp();
@@ -104,7 +96,6 @@ await test('R1. Quiz.submit() rejects null / undefined / "" instead of recording
   eq(quiz.current.correct + quiz.current.incorrect, 0, 'blank answers changed the score');
   eq(quiz.current.incorrect, 0, 'accuracy was corrupted by a blank answer');
 
-  // A real answer still works after the refusals.
   const q = quiz.currentQuestion();
   const attempt = quiz.submit(q.correctAnswer);
   assert(attempt && attempt.isCorrect === true, 'valid answer was rejected');
@@ -129,13 +120,13 @@ await test('R3. Countdown persistence is throttled, but pause() still flushes th
   const dom = makeApp();
   const win = dom.window;
   win.location.hash = '#/timed';
-  await sleep(150);   // let the app route once and start the countdown
+  await sleep(150);
 
   let writes = 0;
   const realSetItem = win.localStorage.setItem.bind(win.localStorage);
   win.localStorage.setItem = (...args) => { writes++; return realSetItem(...args); };
 
-  await sleep(6400); // ~6 ticks: 6 writes before the fix, 1 write after it
+  await sleep(6400);
   assert(writes <= 2, `timer wrote localStorage ${writes} times in ~6 ticks (expected <= 2)`);
 
   const leftBefore = win.QuizEngine.Quiz.remainingSec;
@@ -156,21 +147,16 @@ await test('R4. Streak and "questions today" use the LOCAL date, not UTC', () =>
   const now = new Date();
   assert(-now.getTimezoneOffset() > 0, `this test needs a timezone ahead of UTC (offset is ${now.getTimezoneOffset()})`);
 
-  // Three attempts that all land on the PREVIOUS UTC day but span two LOCAL days:
-  //   00:30 today (local)  -> 19:30 yesterday UTC
-  //   02:00 today (local)  -> 21:00 yesterday UTC
-  //   23:30 yesterday      -> 18:30 yesterday UTC
   const today0030 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 30);
   const today0200 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 2, 0);
   const yest2330 = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 30);
 
-  // Guard: the fixture really is an edge case (UTC day != local day).
   assert(today0030.toISOString().slice(0, 10) !== Stats.dayKey(today0030),
     'fixture is not a UTC/local boundary case; the test would prove nothing');
 
-  win.StateStore.recordAttempt({ id: 'a1', questionId: 'q1', category: 'Percentages', isCorrect: true, responseTimeMs: 100, attemptedAt: today0030.toISOString() });
-  win.StateStore.recordAttempt({ id: 'a2', questionId: 'q2', category: 'Percentages', isCorrect: true, responseTimeMs: 100, attemptedAt: today0200.toISOString() });
-  win.StateStore.recordAttempt({ id: 'a3', questionId: 'q3', category: 'Percentages', isCorrect: true, responseTimeMs: 100, attemptedAt: yest2330.toISOString() });
+  win.StateStore.recordAttempt({ id: 'a1', questionId: 'q1', category: 'Speed', isCorrect: true, responseTimeMs: 100, attemptedAt: today0030.toISOString() });
+  win.StateStore.recordAttempt({ id: 'a2', questionId: 'q2', category: 'Speed', isCorrect: true, responseTimeMs: 100, attemptedAt: today0200.toISOString() });
+  win.StateStore.recordAttempt({ id: 'a3', questionId: 'q3', category: 'Speed', isCorrect: true, responseTimeMs: 100, attemptedAt: yest2330.toISOString() });
 
   eq(Stats.questionsToday(), 2, 'questionsToday() counted UTC days instead of local days');
   eq(Stats.dailyStreak(), 2, 'dailyStreak() used the UTC date boundary');
@@ -187,7 +173,7 @@ await test('R5. Snapshots saved in the same millisecond still sort newest-first'
     const snap = JSON.parse(JSON.stringify(base));
     snap.id = tag;
     snap.startedAt = fixed;
-    snap.lastSavedAt = fixed; // identical to the millisecond
+    snap.lastSavedAt = fixed;
     win.StateStore.saveUnfinishedSnapshot(snap);
   });
   const order = win.StateStore.getUnfinished().map((s) => s.id);
@@ -195,38 +181,37 @@ await test('R5. Snapshots saved in the same millisecond still sort newest-first'
   dom.window.close();
 });
 
-await test('R6. "Expert" difficulty now generates Expert questions with safe hints', () => {
+await test('R6. "Hard" difficulty now generates Hard questions with safe hints', () => {
   const dom = makeApp();
   const win = dom.window;
   go(dom, '#/practice');
-  const pool = win.QuizEngine.buildSession('quick', { count: 40, difficulty: 'Expert' });
-  const expert = pool.questionCache.filter((q) => q.difficulty === 'Expert');
-  assert(expert.length > 0, 'no Expert questions were generated for an Expert quiz');
-  for (const q of expert.slice(0, 10)) {
+  const pool = win.QuizEngine.buildSession('quick', { count: 40, difficulty: 'Hard' });
+  const hard = pool.questionCache.filter((q) => q.difficulty === 'Hard');
+  assert(hard.length > 0, 'no Hard questions were generated for a Hard quiz');
+  for (const q of hard.slice(0, 10)) {
     const hint = win.Hints.hintFor(q);
-    assert(hint && hint.length > 15, `Expert question has no hint: ${q.question}`);
+    assert(hint && hint.length > 15, `Hard question has no hint: ${q.question}`);
     assert(!win.Hints.revealsAnswer(hint, q), `hint revealed the answer: ${hint} -> ${q.correctAnswer}`);
   }
   dom.window.close();
 });
 
-await test('R7. New Expert generators produce self-consistent questions', () => {
+await test('R7. v1.7.0 generators produce self-consistent questions for all 7 categories', () => {
   const dom = makeApp();
   const win = dom.window;
-  const seen = { successive: 0, reverse: 0, roundtrip: 0 };
-  for (let i = 0; i < 400; i++) {
-    const q = win.Generator.generateOne(i % 2 === 0 ? 'Percentages' : 'Averages', 'Expert');
+  const cats = ['Speed', 'Percentage', 'Dozen', 'Area', 'DMAS Rule', 'Zakat (2.5%)', 'Profit and Loss'];
+  const seen = {};
+  for (let i = 0; i < 350; i++) {
+    const cat = cats[i % cats.length];
+    const q = win.Generator.generateOne(cat, 'Hard');
     if (!q) continue;
-    if (/increased by|decreased by/.test(q.question)) seen.successive++;
-    else if (/% of a number is/.test(q.question)) seen.reverse++;
-    else if (/returns at/.test(q.question)) seen.roundtrip++;
-    // The generator's own answer must be accepted by the grader.
+    seen[cat] = (seen[cat] || 0) + 1;
     assert(win.Normalize.compareAnswers(q.correctAnswer, q), `answer not graded correct: ${q.question} -> ${q.correctAnswer}`);
     const hint = win.Hints.hintFor(q);
     assert(hint && hint.length > 15, `no hint for: ${q.question}`);
     assert(!win.Hints.revealsAnswer(hint, q), `hint revealed the answer for: ${q.question}`);
   }
-  assert(seen.successive > 0 && seen.reverse > 0 && seen.roundtrip > 0, `generators not reached: ${JSON.stringify(seen)}`);
+  for (const c of cats) assert(seen[c] > 0, `generator "${c}" never produced a question`);
   dom.window.close();
 });
 
@@ -238,7 +223,7 @@ await test('R8. A second toast is not wiped out by the first toast\'s timer', as
   win.UI.showToast('first message');
   await sleep(1000);
   win.UI.showToast('second message');
-  await sleep(1600); // 2.6s after the first toast -> old code hid the second one here
+  await sleep(1600);
   assert(toast.classList.contains('show'), 'the newer toast was hidden by the older toast timer');
   eq(toast.textContent, 'second message', 'toast text was replaced');
   dom.window.close();
@@ -278,9 +263,9 @@ await test('R11. Fractions accept a negative denominator and match equivalent fo
   const win = dom.window;
   const N = win.Normalize;
   assert(N.parseFraction('7/-20'), 'negative denominator was rejected');
-  const q = { question: 'x', correctAnswer: '7/20', acceptedAnswers: [], category: 'Fractions', unit: '' };
+  const q = { question: 'x', correctAnswer: '7/20', acceptedAnswers: [], category: 'Area', unit: '' };
   assert(N.compareAnswers('-7/20', q) === false, '-7/20 must not equal 7/20');
-  const qNeg = { question: 'y', correctAnswer: '-7/20', acceptedAnswers: [], category: 'Fractions', unit: '' };
+  const qNeg = { question: 'y', correctAnswer: '-7/20', acceptedAnswers: [], category: 'Area', unit: '' };
   assert(N.compareAnswers('7/-20', qNeg) === true, '7/-20 should equal -7/20');
   dom.window.close();
 });
@@ -295,10 +280,6 @@ await test('R12. A Content-Security-Policy is declared and nothing loads from th
   const files = ['index.html', 'sw.js', 'manifest.webmanifest', 'css/styles.css'].concat(
     fs.readdirSync(path.join(PWA, 'js')).map((f) => 'js/' + f)
   );
-  // A user-initiated outbound link is not a loaded resource: the Contact Us
-  // page hands a WhatsApp URL to the platform (WhatsApp, or the browser when
-  // WhatsApp is not installed). Nothing is fetched from it, so the app is
-  // still offline-first - and nothing else remote is tolerated.
   const OUTBOUND = [
     'https://wa.me/03485581969?text=Hey!%20We%20want%20you%20to%20improve%20these%20things%20in%20the%20Mental%20Maths%20Practice%20application......',
   ];
@@ -320,11 +301,9 @@ await test('R13. Every category is seeded, and no card ever shows a bare "0 seed
   cards.forEach((card) => {
     const name = card.querySelector('h3').textContent.trim();
     const meta = card.querySelector('.cat-meta').textContent.trim();
-    // the v1.2 bank seeds every category, so a zero count must never appear
     assert(seededCounts[name] > 0, `"${name}" has no seeded questions`);
     assert(!/\b0 seeded questions\b/.test(meta), `"${name}" shows a bare zero count: ${meta}`);
   });
-  // and the bank itself must meet the master-prompt minimum
   const perCat = Object.values(seededCounts);
   eq(perCat.length, win.CATEGORIES.length, 'every category in CATEGORIES must be seeded');
   assert(Math.min(...perCat) >= 50, 'each category must carry at least 50 questions, saw ' + Math.min(...perCat));
@@ -332,16 +311,13 @@ await test('R13. Every category is seeded, and no card ever shows a bare "0 seed
 });
 
 await test('R14. Attempt history is capped at 5000 without losing the newest data', () => {
-  // Seeded directly: calling recordAttempt() 5000 times would re-serialise the
-  // whole state on every call and OOM jsdom (it is O(n^2) by design of the
-  // immediate-persistence model, not a bug in the cap).
   const attempts = [];
-  for (let i = 0; i < 5005; i++) attempts.push({ id: 'a' + i, questionId: 'q', category: 'Percentages', isCorrect: true, responseTimeMs: 1, attemptedAt: new Date().toISOString() });
+  for (let i = 0; i < 5005; i++) attempts.push({ id: 'a' + i, questionId: 'q', category: 'Speed', isCorrect: true, responseTimeMs: 1, attemptedAt: new Date().toISOString() });
   const dom = makeApp({ 'iscsp-mm-state-v1': JSON.stringify({ attempts, sessions: [], unfinished: [] }) });
   const win = dom.window;
 
   eq(win.StateStore.getAttempts().length, 5005, 'seeded attempts were not loaded');
-  win.StateStore.recordAttempt({ id: 'newest', questionId: 'q', category: 'Percentages', isCorrect: true, responseTimeMs: 1, attemptedAt: new Date().toISOString() });
+  win.StateStore.recordAttempt({ id: 'newest', questionId: 'q', category: 'Speed', isCorrect: true, responseTimeMs: 1, attemptedAt: new Date().toISOString() });
   const all = win.StateStore.getAttempts();
   eq(all.length, 5000, 'attempts cap (5000) not enforced');
   eq(all[all.length - 1].id, 'newest', 'the newest attempt was dropped instead of the oldest');
@@ -356,8 +332,8 @@ await test('R15. An unknown ?cat= route falls back to mixed practice instead of 
   const quiz = win.QuizEngine.Quiz;
   assert(quiz.isActive(), 'quiz did not start');
   eq(quiz.current.category, null, 'an unknown category should not be stored on the session');
-  go(dom, '#/category?cat=Percentages');
-  eq(win.QuizEngine.Quiz.current.category, 'Percentages', 'a valid category should still work');
+  go(dom, '#/category?cat=Speed');
+  eq(win.QuizEngine.Quiz.current.category, 'Speed', 'a valid category should still work');
   dom.window.close();
 });
 
