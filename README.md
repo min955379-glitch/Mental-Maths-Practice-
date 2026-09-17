@@ -3,11 +3,21 @@
 A complete, polished, production-quality mental-math training platform for
 ISCSP exam preparation.
 
-> **Latest release — v1.8.1 (2026-09-17, launch-crash fix).** Signed Android APK:
+> **Latest release — v1.8.2 (2026-09-17, production AdMob).** Signed Android APK:
 > [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 5287 KB
-> (5,413,740 bytes), versionCode 13, signed with the release key (v1 + v2 +
-> v3 verified). Installs as an in-place update over every earlier build and
+> (5,413,740 bytes), versionCode 14, versionName 1.8.2, signed with the
+> release key (v1 + v2 + v3 verified), same SHA-256 as every prior release so
+> it installs as an in-place update over v1.8.1 (and v1.8.0/v1.7.x) and
 > keeps all of your progress, stats, history and unfinished quizzes.
+>
+> **This is the first build with the production AdMob IDs:**
+> App ID `ca-app-pub-7325835183643107~7880182915`, Banner
+> `ca-app-pub-7325835183643107/8055889847`, Interstitial
+> `ca-app-pub-7325835183643107/9460857890`. The default Gradle build still
+> uses Google's official test ad units, so safe `bash build.sh` /
+> `./gradlew assembleRelease` runs are unchanged; the production variant
+> is `./gradlew assembleRelease -PAD_TEST=0` (see `apk/RELEASE-NOTES.md`
+> for verification).
 > **v1.2.0 is the content + difficulty release:** **1,130 original questions**
 > across all 18 categories (50+ per category, split Easy / Medium / Hard by
 > reasoning depth, not digit count), a new **EASY · MEDIUM · HARD chooser
@@ -74,11 +84,15 @@ With a computer and USB debugging enabled: `adb install -r Mental-Maths-Practice
 | What | Value |
 |---|---|
 | Package | `com.iscsp.mentalmatharena` |
-| Version | versionCode 13 · versionName 1.8.1 |
+| Version | versionCode 14 · versionName 1.8.2 |
 | Size | 5.2 MB (5,413,740 bytes) |
 | Min / target SDK | 21 (Android 5.0) / 34 (Android 14) |
 | Signature | v1 + v2 + v3, release key SHA-256 `2d7470c4a5239d5d…` |
-| MD5 | `090335ae1dc9f63505caf8a7a64d4c3a` |
+| MD5 | `c489436bc48e0069253578529a7d2479` |
+| SHA-256 | `126c34344be316d71119ef650b387919c456d2b1bdfb6afc1aac60cbddb482a4` |
+| AdMob App ID | `ca-app-pub-7325835183643107~7880182915` (production) |
+| AdMob Banner ID | `ca-app-pub-7325835183643107/8055889847` (production) |
+| AdMob Interstitial ID | `ca-app-pub-7325835183643107/9460857890` (production) |
 
 ## Live progress log
 
@@ -782,6 +796,97 @@ label) and is documented as such in `BUGFIX-REPORT.md`.
 `versionCode 10`, `versionName 1.6.0`, minSdk 21 / targetSdk 34, signed
 v1 + v2 + v3 with the same release key (cert SHA-256 `2d7470c4a5239d5d…`),
 MD5 `4b8756df4014937c84e2d918584f80e5`.
+
+### Step 27 — v1.8.0 / v1.8.1 / v1.8.2: Google AdMob, end to end
+
+**v1.8.0** added Google AdMob (banner + interstitial) directly inside the
+existing WebView wrapper, using a hand-rolled `aapt2 + d8 + apksigner`
+pipeline so the APK stayed small. It compiled and signed, but it **crashed on
+launch**: the offline build dexed `classes.jar` from each AAR without
+merging their resources, generating their R classes or merging their
+manifests. 146 referenced types were missing from the shipped dex, the first
+AAR class to touch its own R class threw `NoClassDefFoundError` inside
+`MainActivity.onCreate()`, and the app never reached the WebView.
+
+**v1.8.1** switched the build to the project's existing Gradle build
+(`apk/build.sh`), which resolves `com.google.android.gms:play-services-ads`
+from Google's Maven and merges resources, generates every R class and merges
+manifests. Same scan on the v1.8.1 APK: **0 missing R classes**. The default
+build uses Google's official test ad units, so a plain `bash build.sh` is
+always safe. `build-offline.sh` was made refuse-to-run, so the broken
+packaging path cannot be invoked by accident.
+
+The interstitial trigger was also fixed: it used to wrap
+`QuizEngine.Quiz.onFinish`, but `renderQuizScreen()` re-assigns that callback
+on every question and silently discards the wrapper. `pwa/js/ads.js` now
+watches for the results screen element instead, which is stable across
+question re-renders.
+
+**v1.8.2** is the **first release to ship the production AdMob configuration**.
+The Gradle build still defaults to Google's test ad units (so any
+intermediate build is safe); the production variant is built with
+`./gradlew assembleRelease -PAD_TEST=0`. That single flag swaps three
+strings in one place:
+
+| | Test (default) | Production (`-PAD_TEST=0`) |
+|---|---|---|
+| App ID | `ca-app-pub-3940256099942544~3347511713` | `ca-app-pub-7325835183643107~7880182915` |
+| Banner | `ca-app-pub-3940256099942544/6300978111` | `ca-app-pub-7325835183643107/8055889847` |
+| Interstitial | `ca-app-pub-3940256099942544/1033173712` | `ca-app-pub-7325835183643107/9460857890` |
+
+No Java source was changed, no PWA source was changed, no test was changed.
+`versionCode` 13 → **14**, `versionName` "1.8.1" → **"1.8.2"** so the
+package manager installs this over the test build.
+
+**Verified from the shipped APK, not just the source:**
+- `aapt2 dump xmltree AndroidManifest.xml`:
+  `<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"
+              android:value="ca-app-pub-7325835183643107~7880182915"/>`,
+  `<provider … MobileAdsInitProvider/>`,
+  `<activity … AdActivity/>`,
+  `<provider … androidx.startup.InitializationProvider/>`,
+  `<uses-permission … AD_ID/>`,
+  meta-data `com.google.android.gms.version`.
+- `dexdump | grep ca-app-pub-3940256099942544` in every `classes*.dex`:
+  **0 matches** (test banner / interstitial / app id absent).
+- `dexdump | grep ca-app-pub-7325835183643107` in every `classes*.dex`:
+  exactly the two expected values `…/8055889847` (banner) and
+  `…/9460857890` (interstitial).
+- `apksigner verify`: v1 + v2 + v3 all `true`; one signer with cert SHA-256
+  `2d7470c4a5239d5df72090f5b0329b99efd394a305c54464b2800cb1ae129d43`
+  (the same release key as v1.8.1 / v1.7.0, so this installs as an in-place
+  update).
+- 9/9 PASS in `tests/admob_check.py` against the assets extracted from the
+  APK: the PWA works without a native bridge, browsing requests no ad, no ad
+  is requested while answering, exactly one interstitial request fires on
+  the results screen, and no further requests happen while the user stays on
+  the results screen.
+- 188/189 PASS in the ten jsdom suites (the same single pre-existing
+  WhatsApp-button-color css-layout failure as every release since v1.6.0).
+
+**Ad format count** — the Java imports used by the app are limited to:
+```
+com.google.android.gms.ads.AdRequest, AdView, AdSize.SMART_BANNER,
+    FullScreenContentCallback, LoadAdError, MobileAds,
+    initialization.{InitializationStatus,OnInitializationCompleteListener},
+    interstitial.{InterstitialAd,InterstitialAdLoadCallback}
+```
+No `RewardedAd`, no `NativeAd` / `NativeAdView`, no `AppOpenAd`, no
+`AdManager*` (Ad Exchange) classes are imported by the app. The PWA bridge
+exposes one method, `showInterstitialIfReady()`, which the engine guards by
+watching for the results screen element (see `pwa/js/ads.js`).
+
+**Not verified in this sandbox** — real device launch + logcat. The sandbox
+has no `/dev/kvm` and no attached Android device, so `adb install` was not
+run. The launch path is identical to v1.8.1 (same Gradle output, same Java
+sources, same `assets/`), and v1.8.1 was confirmed by the user to launch and
+reach the main screen.
+
+**Rebuilt APK** — `apk/Mental-Maths-Practice.apk`, 5,413,740 bytes
+(5,287 KB), `versionCode 14`, `versionName 1.8.2`, minSdk 21 / targetSdk 34,
+signed v1 + v2 + v3 with the same release key (cert SHA-256
+`2d7470c4a5239d5d…`), MD5 `c489436bc48e0069253578529a7d2479`,
+SHA-256 `126c34344be316d71119ef650b387919c456d2b1bdfb6afc1aac60cbddb482a4`.
 
 ## How to run the PWA locally
 

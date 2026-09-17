@@ -1,5 +1,92 @@
 # Mental Maths Practice — release notes
 
+## v1.8.2 — Production AdMob release (2026-09-17)
+
+**File:** `apk/Mental-Maths-Practice.apk` (5.2 MB / 5,413,740 bytes, versionCode 14, versionName 1.8.2)
+**MD5:** `c489436bc48e0069253578529a7d2479`
+**SHA-256:** `126c34344be316d71119ef650b387919c456d2b1bdfb6afc1aac60cbddb482a4`
+**Signed:** v1 + v2 + v3 with the same release key (signer MD5 `efaba7267a95c337ecfaa8b4cb2241c0`,
+SHA-256 `2d7470c4a5239d5df72090f5b0329b99efd394a305c54464b2800cb1ae129d43`). Installs as an
+in-place update over v1.8.1.
+**Requires:** Android 5.0 (API 21)+
+
+### What changed from v1.8.1
+- The default Gradle build (`bash apk/build.sh` / `./gradlew assembleRelease`) still
+  uses Google's official test ad units (`ca-app-pub-3940256099942544~3347511713`)
+  so that any in-place re-build is safe to use for development.
+- The production APK shipped in this release was produced with
+  `./gradlew assembleRelease -PAD_TEST=0`. That single flag swaps:
+  - **App ID** &nbsp; `~`  &nbsp; `ca-app-pub-7325835183643107~7880182915`
+  - **Banner ID**  &nbsp; `/`  &nbsp; `ca-app-pub-7325835183643107/8055889847`
+  - **Interstitial ID** &nbsp; `/`  &nbsp; `ca-app-pub-7325835183643107/9460857890`
+- `versionCode` 13 → **14**; `versionName` "1.8.1" → **"1.8.2"** so the
+  package manager installs this over the test build.
+- Nothing else changed: same `MainActivity.java`, same `assets/js/ads.js`,
+  same Gradle wrapper, same Gradle plugin (AGP 8.5.2), same
+  `play-services-ads:23.6.0`, same Gradle build script. The PWA is byte-for-byte
+  the same set of files that v1.8.1 ships.
+
+### Ad format count
+Source / Java imports used by the app:
+```
+com.google.android.gms.ads.AdRequest
+com.google.android.gms.ads.AdView
+com.google.android.gms.ads.AdSize.SMART_BANNER
+com.google.android.gms.ads.FullScreenContentCallback
+com.google.android.gms.ads.LoadAdError
+com.google.android.gms.ads.MobileAds
+com.google.android.gms.ads.initialization.InitializationStatus
+com.google.android.gms.ads.initialization.OnInitializationCompleteListener
+com.google.android.gms.ads.interstitial.InterstitialAd
+com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+```
+**Only Banner + Interstitial.** No `RewardedAd`, no `NativeAd` /
+`NativeAdView`, no `AppOpenAd`, no `AdManager*` (Ad Exchange) classes
+imported. The PWA bridge exposes one method, `showInterstitialIfReady()`,
+which the engine guards by watching for the results screen element
+(see `pwa/js/ads.js`).
+
+### Static verification of THIS APK
+- `aapt2 dump xmltree AndroidManifest.xml`:
+  - `<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"
+                android:value="ca-app-pub-7325835183643107~7880182915"/>`
+  - `<provider android:name="com.google.android.gms.ads.MobileAdsInitProvider"/>`
+  - `<activity android:name="com.google.android.gms.ads.AdActivity"/>`
+  - `<provider android:name="androidx.startup.InitializationProvider"/>`
+  - meta-data `com.google.android.gms.version`
+  - `<uses-permission android:name="com.google.android.gms.permission.AD_ID"/>`
+- `dexdump | grep ca-app-pub-3940256099942544` → **0 matches in any
+  classes*.dex** (test banner / interstitial / app id absent).
+- `dexdump | grep ca-app-pub-7325835183643107` → exactly the two
+  expected values: `…/8055889847` (banner) and `…/9460857890` (interstitial).
+- `apksigner verify`: v1, v2 and v3 all `true`; one signer, cert SHA-256
+  `2d7470c4a5239d5df72090f5b0329b99efd394a305c54464b2800cb1ae129d43`.
+
+### Functional verification of the PWA that ships inside this APK
+- 9/9 PASS in `tests/admob_check.py`:
+  1. PWA works with no `AndroidAdsBridge` present.
+  2. Browsing dashboard / categories / settings / contact / stats requests **no** ad.
+  3. A full 10-question quiz answers correctly.
+  4. **No** ad requested during answering.
+  5. Exactly **one** interstitial request fires.
+  6. That request fires only on the `result-screen`.
+  7. No further requests while the user stays on the results screen.
+  8. No page errors anywhere.
+  9. Bridge installs in the bridge-present configuration.
+- 188/189 PASS in the jsdom suite (the single failing test is the
+  pre-existing `css-layout` "WhatsApp button is a full-width,
+  easy-to-tap control on phones" assertion that has been broken on
+  every release since v1.6.0 and is unrelated to AdMob).
+
+### Not verified in this sandbox
+- **Real device launch.** This environment has no `/dev/kvm` and no
+  attached Android device, so `adb install` + `logcat` was not run.
+  The launch path is the same Gradle output as v1.8.1, which the user
+  confirmed launches and reaches the main screen. The static
+  verification above is the strongest evidence available here.
+
+---
+
 ## v1.8.1 — Launch-crash fix (2026-09-17)
 
 **File:** `apk/Mental-Maths-Practice.apk` (5.2 MB / 5,413,740 bytes, versionCode 13, versionName 1.8.1)
