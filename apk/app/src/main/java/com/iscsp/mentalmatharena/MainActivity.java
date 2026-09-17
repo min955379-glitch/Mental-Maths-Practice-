@@ -2,11 +2,13 @@ package com.iscsp.mentalmatharena;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -21,12 +23,15 @@ import android.webkit.WebViewClient;
 import android.widget.LinearLayout;
 
 import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.FullScreenContentCallback;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.ResponseInfo;
+import com.google.android.gms.ads.initialization.AdapterStatus;
 import com.google.android.gms.ads.initialization.InitializationStatus;
 import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
@@ -41,6 +46,14 @@ import java.util.Locale;
  * {@link #INTERSTITIAL_AD_UNIT_ID} constants below: during development
  * and on the official test tracks the constants are the AdMob test IDs;
  * the same APK ships the real IDs only when produced as a final release.
+ *
+ * DIAGNOSTIC BUILD: every ad lifecycle event writes a one-line log under
+ * the "MentalMathsAd" tag so the actual AdMob response (or error code)
+ * can be captured with `adb logcat` from the device. This is the only
+ * change from the v1.8.2 release: banner size changed from the
+ * deprecated SMART_BANNER to an anchored adaptive banner (still a 320x50
+ * banner at the top), and AdListener callbacks were added so a banner
+ * failure is visible in logcat.
  *
  * Banner placement: ABOVE the WebView, in a small fixed-height banner
  * row. The PWA itself sits below the banner and gets the rest of the
@@ -62,23 +75,14 @@ public class MainActivity extends Activity {
 
     // ------------------------------------------------------------------
     // AdMob configuration
-    //
-    // These IDs are intentionally switchable from a single place so the
-    // release pipeline can drop in the production values, while the
-    // development build uses Google's official test banner and
-    // interstitial IDs. The AdMob App ID is in AndroidManifest.xml.
     // ------------------------------------------------------------------
 
-    /** Banner Ad Unit ID. Set to Google's test ID for development. */
+    /** Banner Ad Unit ID. Switched between test and production by build. */
     private static final String BANNER_AD_UNIT_ID =
-            // "/21775744923/example/anchor" is Google's OFFICIAL test ad
-            // unit ID for adaptive banner ads (documented at
-            // https://developers.google.com/admob/android/banner#sample_ad_units).
             com.iscsp.mentalmatharena.AdMobConfig.BANNER_AD_UNIT_ID;
 
-    /** Interstitial Ad Unit ID. Set to Google's test ID for development. */
+    /** Interstitial Ad Unit ID. Switched between test and production by build. */
     private static final String INTERSTITIAL_AD_UNIT_ID =
-            // Google's OFFICIAL test ad unit ID for interstitials.
             com.iscsp.mentalmatharena.AdMobConfig.INTERSTITIAL_AD_UNIT_ID;
 
     // ------------------------------------------------------------------
@@ -97,6 +101,10 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        Log.d(TAG, "onCreate started. App=" + getPackageName()
+                + " banner=" + BANNER_AD_UNIT_ID
+                + " interstitial=" + INTERSTITIAL_AD_UNIT_ID);
+
         // Status bar / nav bar match the dark app theme.
         Window window = getWindow();
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
@@ -111,25 +119,91 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(Color.parseColor("#0B1437"));
 
         // -- Banner ---------------------------------------------------
-        // Smart-Banner-style height (~ 50 dp). Anchored at the very TOP
-        // of the window; it sits ABOVE the WebView and never overlaps
-        // PWA content. The PWA's own header has the same 0 px top inset.
-        //
-        // We use a sized-anchor banner that picks the smallest effective
+        // Anchored adaptive banner: picks the smallest effective
         // adaptive size for the current screen width. AdMob guarantees
-        // it returns a creative that fits within that height.
+        // it returns a creative that fits within that height. SMART_BANNER
+        // is deprecated in 21.0.0+; adaptive banner sizes match the modern
+        // ad-server pool and dramatically improve fill rate on new ad units.
         bannerAdView = new AdView(this);
         bannerAdView.setAdUnitId(BANNER_AD_UNIT_ID);
-        bannerAdView.setAdSize(AdSize.SMART_BANNER);
+        AdSize adaptive = adaptiveBannerSize(this, /*widthDp=*/320);
+        Log.d(TAG, "Banner created. unitId=" + BANNER_AD_UNIT_ID
+                + " size=" + adaptive);
+        bannerAdView.setAdSize(adaptive);
         LinearLayout.LayoutParams bannerParams =
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT);
         bannerAdView.setLayoutParams(bannerParams);
-        // Reserve space at the top of the WebView so content never gets
-        // covered by the banner (the banner is already above the WebView
-        // in this layout; this is just clarity).
+        // Banner at index 0 = top of vertical LinearLayout = above the
+        // WebView. They cannot overlap because LinearLayout carves
+        // non-overlapping rows by construction.
         root.addView(bannerAdView, 0);
+
+        // Log when the banner is measured & laid out - lets us catch
+        // zero-size layouts on device.
+        bannerAdView.post(new Runnable() {
+            @Override public void run() {
+                Log.d(TAG, "Banner laid out: w=" + bannerAdView.getWidth()
+                        + " h=" + bannerAdView.getHeight()
+                        + " visible=" + bannerAdView.getVisibility()
+                        + " isAttached=" + bannerAdView.isAttachedToWindow());
+            }
+        });
+
+        // Attach an AdListener so we capture both the success and the
+        // failure paths of the banner load. This is the diagnostic hook
+        // the previous build did not have.
+        bannerAdView.setAdListener(new AdListener() {
+            private final String t = TAG;
+
+            @Override
+            public void onAdLoaded() {
+                Log.d(t, "Banner onAdLoaded. w=" + bannerAdView.getWidth()
+                        + " h=" + bannerAdView.getHeight());
+            }
+
+            @Override
+            public void onAdFailedToLoad(LoadAdError error) {
+                loadedInterstitial = null; // (banner doesn't touch this, but
+                                           // keep null semantics consistent)
+                if (error == null) {
+                    Log.d(t, "Banner onAdFailedToLoad: (null LoadAdError)");
+                    return;
+                }
+                Log.d(t, "Banner onAdFailedToLoad: code=" + error.getCode()
+                        + " domain=" + error.getDomain()
+                        + " message=" + error.getMessage());
+                ResponseInfo ri = error.getResponseInfo();
+                if (ri != null) {
+                    Log.d(t, "Banner ResponseInfo: adapter="
+                            + ri.getMediationAdapterClassName()
+                            + " responseId=" + ri.getResponseId());
+                } else {
+                    Log.d(t, "Banner ResponseInfo: null");
+                }
+            }
+
+            @Override
+            public void onAdOpened() {
+                Log.d(t, "Banner onAdOpened (full screen).");
+            }
+
+            @Override
+            public void onAdClicked() {
+                Log.d(t, "Banner onAdClicked.");
+            }
+
+            @Override
+            public void onAdClosed() {
+                Log.d(t, "Banner onAdClosed.");
+            }
+
+            @Override
+            public void onAdImpression() {
+                Log.d(t, "Banner onAdImpression.");
+            }
+        });
 
         // -- WebView --------------------------------------------------
         webView = new WebView(this);
@@ -173,10 +247,12 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
+                Log.d(TAG, "WebView onPageFinished url=" + url);
                 // Once the PWA is fully loaded the first time, the banner
                 // can safely request an ad (no flicker above the splash).
                 if (bannerAdView != null && bannerAdView.getTag() == null) {
                     bannerAdView.setTag("first-request");
+                    Log.d(TAG, "Banner loadAd() called for unitId=" + BANNER_AD_UNIT_ID);
                     bannerAdView.loadAd(buildAdRequest());
                 }
             }
@@ -195,18 +271,53 @@ public class MainActivity extends Activity {
         setContentView(root);
 
         // Initialize the Mobile Ads SDK off the UI thread.
+        Log.d(TAG, "MobileAds.initialize called.");
         MobileAds.initialize(
                 this,
                 new OnInitializationCompleteListener() {
                     @Override
                     public void onInitializationComplete(InitializationStatus status) {
+                        StringBuilder sb = new StringBuilder("MobileAds.initialize completed.");
+                        if (status != null) {
+                            sb.append(" adapterStatus=");
+                            java.util.Map<String, AdapterStatus> m = status.getAdapterStatusMap();
+                            if (m != null && !m.isEmpty()) {
+                                for (java.util.Map.Entry<String, AdapterStatus> e : m.entrySet()) {
+                                    AdapterStatus v = e.getValue();
+                                    sb.append(e.getKey())
+                                            .append("[state=").append(v == null ? "?" : v.getInitializationState())
+                                            .append(",desc=").append(v == null ? "?" : v.getDescription())
+                                            .append("] ");
+                                }
+                            } else {
+                                sb.append("(empty)");
+                            }
+                        }
+                        Log.d(TAG, sb.toString());
                         // Preload an interstitial right away so the first
-                        // "quiz complete" event has an ad to show. If it
-                        // fails to load the loader callback handles it
-                        // and the user is unaffected.
+                        // "quiz complete" event has an ad to show.
                         requestInterstitial();
                     }
                 });
+    }
+
+    /**
+     * Returns an anchored adaptive banner size (modern replacement for
+     * SMART_BANNER, which was deprecated in play-services-ads 21.0.0).
+     * Anchored to portrait; the SDK flips it on orientation change.
+     * The width in dp is taken from the caller's best estimate of the
+     * screen width. 320dp is the safe minimum for any phone.
+     */
+    private static AdSize adaptiveBannerSize(Context ctx, int widthDp) {
+        // Use the device width in dp if we can read it synchronously.
+        try {
+            DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
+            int pxToDp = (int) (dm.widthPixels / dm.density);
+            if (pxToDp > 0) widthDp = Math.min(Math.max(pxToDp, 320), 1080);
+        } catch (Throwable ignored) {
+            // Fall back to 320dp if DisplayMetrics is unavailable for any reason.
+        }
+        return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(ctx, widthDp);
     }
 
     private AdRequest buildAdRequest() {
@@ -222,6 +333,7 @@ public class MainActivity extends Activity {
 
     private void requestInterstitial() {
         try {
+            Log.d(TAG, "Interstitial load() called for unitId=" + INTERSTITIAL_AD_UNIT_ID);
             InterstitialAd.load(
                     this,
                     INTERSTITIAL_AD_UNIT_ID,
@@ -230,14 +342,33 @@ public class MainActivity extends Activity {
                         @Override
                         public void onAdLoaded(InterstitialAd interstitial) {
                             loadedInterstitial = interstitial;
-                            Log.d(TAG, "Interstitial loaded.");
+                            Log.d(TAG, "Interstitial onAdLoaded.");
+                            ResponseInfo ri = interstitial == null ? null : interstitial.getResponseInfo();
+                            if (ri != null) {
+                                Log.d(TAG, "Interstitial ResponseInfo: adapter="
+                                        + ri.getMediationAdapterClassName()
+                                        + " responseId=" + ri.getResponseId());
+                            }
                         }
 
                         @Override
                         public void onAdFailedToLoad(LoadAdError error) {
                             loadedInterstitial = null;
-                            Log.d(TAG, "Interstitial failed to load: "
-                                    + (error == null ? "?" : error.getMessage()));
+                            if (error == null) {
+                                Log.d(TAG, "Interstitial onAdFailedToLoad: (null LoadAdError)");
+                                return;
+                            }
+                            Log.d(TAG, "Interstitial onAdFailedToLoad: code=" + error.getCode()
+                                    + " domain=" + error.getDomain()
+                                    + " message=" + error.getMessage());
+                            ResponseInfo ri = error.getResponseInfo();
+                            if (ri != null) {
+                                Log.d(TAG, "Interstitial ResponseInfo: adapter="
+                                        + ri.getMediationAdapterClassName()
+                                        + " responseId=" + ri.getResponseId());
+                            } else {
+                                Log.d(TAG, "Interstitial ResponseInfo: null");
+                            }
                             // Do NOT retry in a tight loop here; the next
                             // quiz-complete event will trigger another
                             // request from the bridge (see below).
@@ -246,7 +377,7 @@ public class MainActivity extends Activity {
         } catch (Throwable t) {
             // Defensive: ads are optional. A crash here would block the
             // app from launching.
-            Log.w(TAG, "Interstitial load threw: " + t.getMessage());
+            Log.w(TAG, "Interstitial load threw: " + t.getMessage(), t);
             loadedInterstitial = null;
         }
     }
@@ -254,11 +385,13 @@ public class MainActivity extends Activity {
     /** Called by the JS bridge. Returns synchronously - the actual ad
      *  is shown on the UI thread once the cached object is ready. */
     void showInterstitialFromJs() {
+        Log.d(TAG, "JS bridge called showInterstitialIfReady()");
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 InterstitialAd ad = loadedInterstitial;
                 if (ad == null) {
+                    Log.d(TAG, "Interstitial show: nothing cached, requesting a fresh load.");
                     // Try to refresh in case the previous load failed.
                     requestInterstitial();
                     return;
@@ -268,6 +401,7 @@ public class MainActivity extends Activity {
                         @Override
                         public void onAdDismissedFullScreenContent() {
                             loadedInterstitial = null;
+                            Log.d(TAG, "Interstitial onAdDismissedFullScreenContent.");
                             // Refresh so the NEXT quiz completion has an
                             // ad to show (frequency-capping is handled by
                             // Google, not the app).
@@ -277,20 +411,34 @@ public class MainActivity extends Activity {
                         @Override
                         public void onAdFailedToShowFullScreenContent(AdError adError) {
                             loadedInterstitial = null;
-                            Log.d(TAG, "Interstitial failed to show: "
+                            Log.d(TAG, "Interstitial onAdFailedToShowFullScreenContent: code="
+                                    + (adError == null ? "?" : adError.getCode())
+                                    + " message="
                                     + (adError == null ? "?" : adError.getMessage()));
                             requestInterstitial();
                         }
 
                         @Override
                         public void onAdShowedFullScreenContent() {
+                            Log.d(TAG, "Interstitial onAdShowedFullScreenContent.");
                             // Preload-on-dismiss handled above.
                         }
+
+                        @Override
+                        public void onAdClicked() {
+                            Log.d(TAG, "Interstitial onAdClicked.");
+                        }
+
+                        @Override
+                        public void onAdImpression() {
+                            Log.d(TAG, "Interstitial onAdImpression.");
+                        }
                     });
+                    Log.d(TAG, "Interstitial ad.show() about to be called.");
                     ad.show(MainActivity.this);
                 } catch (Throwable t) {
                     // Show must never propagate out as a crash.
-                    Log.w(TAG, "Interstitial.show threw: " + t.getMessage());
+                    Log.w(TAG, "Interstitial.show threw: " + t.getMessage(), t);
                     loadedInterstitial = null;
                     requestInterstitial();
                 }
