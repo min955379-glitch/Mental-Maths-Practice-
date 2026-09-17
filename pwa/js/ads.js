@@ -7,13 +7,21 @@
   // There is one rule, and this file enforces it:
   //
   //   The interstitial MUST ONLY fire after the user has reached a
-  //   natural break - that is, after `QuizEngine.Quiz.onFinish` fires
-  //   (i.e. the results screen is about to render). It is *never*
-  //   fired while the user is answering a question, and never on the
-  //   dashboard / category / settings screens.
+  //   natural break - that is, once the RESULTS screen of a finished
+  //   quiz session is on screen. It is *never* fired while the user is
+  //   answering a question, and never on the dashboard / category /
+  //   settings / stats screens.
   //
-  // The bridge itself is the `window.AndroidAdsBridge` object that
-  // the Android MainActivity exposes via `WebView.addJavascriptInterface`.
+  // How it detects that break: it watches the DOM for the results
+  // screen instead of wrapping QuizEngine.Quiz.onFinish. The engine
+  // callback cannot be used as a hook because renderQuizScreen()
+  // re-assigns `Quiz.onFinish` on every question, which silently
+  // discards any wrapper installed here. Watching for the element the
+  // results screen renders is both stable and independent of the quiz
+  // engine's internals.
+  //
+  // The bridge itself is the `window.AndroidAdsBridge` object that the
+  // Android MainActivity exposes via WebView.addJavascriptInterface.
   // In a normal browser the property is `undefined` and this module
   // does nothing - so the same PWA can still be hosted on a website
   // for users without the AdMob build.
@@ -33,41 +41,41 @@
     }
   }
 
-  function wireOnce() {
-    var Quiz = window.QuizEngine && window.QuizEngine.Quiz;
-    if (!Quiz) return false;
-    if (Quiz.__adsWired) return true;
-    Quiz.__adsWired = true;
+  // One ad per results screen: armed again as soon as the screen goes
+  // away, so the next completed quiz can request one.
+  var armed = true;
 
-    var prevOnFinish = Quiz.onFinish;
-    Quiz.onFinish = function (session) {
-      // 1) Render the results screen first (as before). The user
-      //    sees their score and review before any ad is requested.
-      if (typeof prevOnFinish === 'function') {
-        try { prevOnFinish(session); } catch (e) {}
-      }
-      // 2) AFTER the results screen is in place, fire the ad. The
-      //    bridge.showInterstitialIfReady() returns synchronously -
-      //    the actual ad is shown asynchronously by the native code
-      //    when the cached ad is ready, with proper Google
-      //    frequency-capping applied.
-      setTimeout(maybeShowInterstitial, 250);
-    };
-    return true;
+  function resultsOnScreen() {
+    return !!(document.querySelector('.result-screen') || document.getElementById('resScore'));
   }
 
-  // Hook on DOMContentLoaded - the PWA's app.js sets up the rest of
-  // the engine at that point, so by the time we run `Quiz.onFinish`
-  // is already defined.
-  document.addEventListener('DOMContentLoaded', function () {
-    // App.js may set `window.QuizEngine.Quiz` either at boot or after
-    // a tiny async step, so we hook both paths.
-    wireOnce();
-    var tries = 0;
-    var iv = setInterval(function () {
-      if (wireOnce() || ++tries > 40) clearInterval(iv);
-    }, 50);
-  });
+  function watchForResults() {
+    if (typeof MutationObserver === 'undefined') return;
+    var observer = new MutationObserver(function () {
+      if (resultsOnScreen()) {
+        if (!armed) return;
+        armed = false;
+        // Let the results screen paint first: the user sees their
+        // score and review before anything else happens.
+        setTimeout(maybeShowInterstitial, 250);
+      } else {
+        armed = true;      // left the results screen - re-arm
+      }
+    });
+    observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+  }
+
+  function start() {
+    watchForResults();
+    // Nothing to do if the results screen is somehow already up.
+    if (resultsOnScreen()) { armed = false; setTimeout(maybeShowInterstitial, 250); }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else {
+    start();
+  }
 
   // Expose for diagnostics only; not part of the runtime API.
   window.__MentalMathsAds = {

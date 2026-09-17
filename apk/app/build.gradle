@@ -6,12 +6,35 @@ android {
     namespace "com.iscsp.mentalmatharena"
     compileSdk 34
 
+    // -------------------------------------------------------------------
+    // AdMob variant switch.
+    //
+    // A plain build uses Google's OFFICIAL test ad units so that running
+    // the app never serves (or accidentally clicks) production ads.
+    // Build the production variant with:  ./gradlew assembleRelease -PAD_TEST=0
+    // -------------------------------------------------------------------
+    def adTest = (project.findProperty('AD_TEST') ?: '1').toString() != '0'
+    def admobAppId      = adTest ? 'ca-app-pub-3940256099942544~3347511713'
+                                 : 'ca-app-pub-7325835183643107~7880182915'
+    def admobBannerId   = adTest ? 'ca-app-pub-3940256099942544/6300978111'
+                                 : 'ca-app-pub-7325835183643107/8055889847'
+    def admobInterId    = adTest ? 'ca-app-pub-3940256099942544/1033173712'
+                                 : 'ca-app-pub-7325835183643107/9460857890'
+
     defaultConfig {
         applicationId "com.iscsp.mentalmatharena"
         minSdk 21
         targetSdk 34
-        versionCode 12
-        versionName "1.8.0"
+        versionCode 13
+        versionName "1.8.1"
+
+        // Injected into AndroidManifest.xml below.
+        manifestPlaceholders = [ADMOB_APP_ID: admobAppId]
+    }
+
+    // AdMobConfig.java reads these.
+    buildFeatures {
+        buildConfig = true
     }
 
     signingConfigs {
@@ -24,9 +47,18 @@ android {
     }
 
     buildTypes {
+        debug {
+            minifyEnabled false
+            buildConfigField 'String', 'AD_BANNER_ID', '"' + admobBannerId + '"'
+            buildConfigField 'String', 'AD_INTERSTITIAL_ID', '"' + admobInterId + '"'
+            buildConfigField 'boolean', 'AD_TEST', adTest ? 'true' : 'false'
+        }
         release {
             minifyEnabled false
             signingConfig signingConfigs.release
+            buildConfigField 'String', 'AD_BANNER_ID', '"' + admobBannerId + '"'
+            buildConfigField 'String', 'AD_INTERSTITIAL_ID', '"' + admobInterId + '"'
+            buildConfigField 'boolean', 'AD_TEST', adTest ? 'true' : 'false'
         }
     }
     compileOptions {
@@ -36,7 +68,25 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.webkit:webkit:1.10.0'
-    implementation 'com.google.android.material:material:1.12.0'
+    // Google Mobile Ads SDK, resolved from Google's Maven repository.
+    //
+    // Gradle merges every AAR resource, generates every library R class and
+    // merges the library manifests - the three steps the old hand-rolled
+    // packaging could not do, and the reason the app crashed on launch.
+    //
+    // Version note: 23.6.0 is the newest line that still supports this
+    // app's minSdk 21. play-services-ads 24.x declares minSdk 23, so
+    // moving to it means raising minSdk to 23 (dropping Android 5.0/5.1).
+    implementation 'com.google.android.gms:play-services-ads:23.6.0'
+    // play-services-ads-lite pins androidx.activity to 1.0.0, which predates
+    // androidx.activity.result (used by some code paths in the closure). Pin a
+    // current version so those classes are actually shipped.
+    implementation 'androidx.activity:activity:1.9.3'
+    // appcompat / material / androidx.webkit were listed here but nothing in
+    // the app uses them (the theme is the platform
+    // android:Theme.Material.Light.NoActionBar and the WebView calls are all
+    // framework ones). They dragged in appcompat + recyclerview +
+    // coordinatorlayout + viewpager + transition, which is tens of thousands
+    // of dead classes. The ads SDK still brings the androidx libraries it
+    // genuinely needs, transitively.
 }

@@ -1,8 +1,4 @@
-# Mental Maths Practice — Project Roadmap
-
-**App:** Mental Maths Practice (ISCSP exam preparation)
-**Repo:** [min955379-glitch/Mental-Maths-Practice-](https://github.com/min955379-glitch/Mental-Maths-Practice-)
-**Latest release:** **v1.7.0 — Seven Approved Categories Only** (2026-09-16) — `apk/Mental-Maths-Practice.apk`, 167 KB, signed v1+v2+v3, MD5 `71816c86653fef07d83449de12e1a014`. The bank is narrowed to 350 questions across Speed / Percentage / Dozen / Area / DMAS Rule / Zakat (2.5%) / Profit and Loss, each at Easy / Moderate / Hard.
+**Latest release:** **v1.8.1 — launch-crash fix** (2026-09-17) — `apk/Mental-Maths-Practice.apk`, 5.2 MB, signed v1+v2+v3, MD5 `090335ae1dc9f63505caf8a7a64d4c3a`. The v1.8.0 AdMob build compiled but died on launch because the hand-rolled packaging shipped 146 missing classes (every library R class among them); the app now builds with Gradle, and the interstitial genuinely fires at session completion.
 **Package:** `com.iscsp.mentalmatharena` (versionCode 10) · **PWA cache:** `iscsp-mm-v12`
 **Last reviewed:** v1.6.0 — clean rebuild on a fresh machine (JDK 17 path + apksigner env fix), TextEncoder polyfill so the registration regression test runs, APK re-signed with the same release key and verified end-to-end
 

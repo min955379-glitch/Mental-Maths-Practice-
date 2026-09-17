@@ -32,6 +32,35 @@
 #                                     AD_INTERSTITIAL_ID.
 set -euo pipefail
 
+# ---------------------------------------------------------------------
+# STOP - this script cannot build the AdMob app.
+#
+# It dexes the classes.jar files pulled out of the Play Services /
+# AndroidX AARs, but it does NOT merge the AARs' resources, generate
+# their R classes, or merge their manifests. Every library class that
+# touches its own resources (androidx.core.R$string,
+# com.google.android.gms.ads.R$layout, ...) therefore dies at runtime
+# with NoClassDefFoundError, and the app crashes on launch. That is the
+# v1.8.0 "builds but will not open" failure - 146 referenced classes
+# were missing from the shipped APK.
+#
+# Use the Gradle build instead; it resolves, merges and generates
+# everything correctly:
+#
+#     bash apk/build.sh          # or ./gradlew assembleRelease
+#
+# Override only if you are deliberately working on the offline
+# pipeline itself.
+# ---------------------------------------------------------------------
+if [ "${I_AM_FIXING_THE_OFFLINE_BUILD:-0}" != "1" ]; then
+  echo "ERROR: build-offline.sh cannot produce a working AdMob APK." >&2
+  echo "       It does not merge AAR resources / R classes / manifests," >&2
+  echo "       which is what made v1.8.0 crash on launch." >&2
+  echo "       Use the Gradle build instead:  bash apk/build.sh" >&2
+  echo "       (Override with I_AM_FIXING_THE_OFFLINE_BUILD=1.)" >&2
+  exit 1
+fi
+
 cd "$(dirname "$0")"
 
 : "${JAVA_HOME:?JAVA_HOME must point at a JDK 17 installation}"

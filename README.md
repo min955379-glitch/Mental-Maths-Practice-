@@ -3,9 +3,9 @@
 A complete, polished, production-quality mental-math training platform for
 ISCSP exam preparation.
 
-> **Latest release — v1.7.0 (2026-09-16, Seven Approved Categories Only).** Signed Android APK:
-> [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 227 KB
-> (232,490 bytes), versionCode 10, signed with the release key (v1 + v2 +
+> **Latest release — v1.8.1 (2026-09-17, launch-crash fix).** Signed Android APK:
+> [`apk/Mental-Maths-Practice.apk`](apk/Mental-Maths-Practice.apk) — 5287 KB
+> (5,413,740 bytes), versionCode 13, signed with the release key (v1 + v2 +
 > v3 verified). Installs as an in-place update over every earlier build and
 > keeps all of your progress, stats, history and unfinished quizzes.
 > **v1.2.0 is the content + difficulty release:** **1,130 original questions**
@@ -74,11 +74,11 @@ With a computer and USB debugging enabled: `adb install -r Mental-Maths-Practice
 | What | Value |
 |---|---|
 | Package | `com.iscsp.mentalmatharena` |
-| Version | versionCode 10 · versionName 1.6.0 |
-| Size | 227 KB (232,490 bytes) |
+| Version | versionCode 13 · versionName 1.8.1 |
+| Size | 5.2 MB (5,413,740 bytes) |
 | Min / target SDK | 21 (Android 5.0) / 34 (Android 14) |
 | Signature | v1 + v2 + v3, release key SHA-256 `2d7470c4a5239d5d…` |
-| MD5 | `4b8756df4014937c84e2d918584f80e5` |
+| MD5 | `090335ae1dc9f63505caf8a7a64d4c3a` |
 
 ## Live progress log
 
@@ -829,8 +829,15 @@ and it is why the APK dropped from 4.4 MB to 515 KB (no AndroidX payload):
 cd apk
 export JAVA_HOME=/path/to/jdk-17
 export ANDROID_HOME=/path/to/android-sdk
-bash build-offline.sh
+bash build.sh                 # test ad units
+bash build.sh -PAD_TEST=0     # production ad units
 ```
+
+> **Build with Gradle (`build.sh`), not `build-offline.sh`.** The offline
+> script dexes the Play Services / AndroidX AARs without merging their
+> resources, generating their R classes or merging their manifests, which is
+> what made the v1.8.0 APK crash on launch (146 referenced classes missing).
+> It now refuses to run. See `apk/ADMOB.md`.
 
 Both scripts re-sync `pwa/` into `app/src/main/assets/` first, so the APK can
 never ship a stale copy of the app again.
