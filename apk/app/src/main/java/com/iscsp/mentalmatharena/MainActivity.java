@@ -130,10 +130,16 @@ public class MainActivity extends Activity {
         Log.d(TAG, "Banner created. unitId=" + BANNER_AD_UNIT_ID
                 + " size=" + adaptive);
         bannerAdView.setAdSize(adaptive);
+        // Force a fixed pixel height so the banner row is always visible
+        // (50 dp in pixels, the standard anchored adaptive banner height
+        // for portrait). WRAP_CONTENT collapses to 0 before the first
+        // creative arrives; a fixed height guarantees the row never
+        // disappears, even on NO_FILL.
+        int bannerHeightPx = (int) (50 * getResources().getDisplayMetrics().density);
         LinearLayout.LayoutParams bannerParams =
                 new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                        bannerHeightPx);
         bannerAdView.setLayoutParams(bannerParams);
         // Banner at index 0 = top of vertical LinearLayout = above the
         // WebView. They cannot overlap because LinearLayout carves
@@ -248,13 +254,9 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 Log.d(TAG, "WebView onPageFinished url=" + url);
-                // Once the PWA is fully loaded the first time, the banner
-                // can safely request an ad (no flicker above the splash).
-                if (bannerAdView != null && bannerAdView.getTag() == null) {
-                    bannerAdView.setTag("first-request");
-                    Log.d(TAG, "Banner loadAd() called for unitId=" + BANNER_AD_UNIT_ID);
-                    bannerAdView.loadAd(buildAdRequest());
-                }
+                // Banner load is fired from the MobileAds.initialize
+                // listener (below), so it is intentionally NOT triggered
+                // here. This callback exists only for diagnostics.
             }
         });
         webView.setWebChromeClient(new WebChromeClient());
@@ -294,6 +296,14 @@ public class MainActivity extends Activity {
                             }
                         }
                         Log.d(TAG, sb.toString());
+                        // Request the banner ad immediately after SDK
+                        // init - no need to wait for the WebView. The
+                        // banner row is already created and laid out by
+                        // the time this fires.
+                        if (bannerAdView != null) {
+                            Log.d(TAG, "Banner loadAd() called for unitId=" + BANNER_AD_UNIT_ID);
+                            bannerAdView.loadAd(buildAdRequest());
+                        }
                         // Preload an interstitial right away so the first
                         // "quiz complete" event has an ad to show.
                         requestInterstitial();
